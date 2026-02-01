@@ -32,7 +32,7 @@ When receiving user feedback or corrections:
 
 2. **Extract learnings**: Determine what specific insights, patterns, or best practices were revealed. Consider if existing rules need clarification or if new conventions should be documented.
 
-3. **Review relevant rules**: Check existing development rules (e.g., `.agents/rules/base.md`) to identify which rules relate to the feedback and could be improved.
+3. **Review relevant rules**: Check existing development rules (e.g., `.cursor/rules/base-standards.mdc`, `.cursor/rules/frontend-standards.mdc`, `.cursor/rules/documentation-standards.mdc`) to identify which rules relate to the feedback and could be improved.
 
 4. **Propose rule updates** (if applicable):
    - Clearly state which rule(s) should be updated

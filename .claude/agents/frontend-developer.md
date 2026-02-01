@@ -43,8 +43,10 @@ Develop, refactor, and polish the **Zefa Finance** frontend, ensuring a seamless
 
 # Rules & Guidelines
 
-1.  **Consult Standards First**: Before generating code, always consult `.cursor/rules/frontend-standards.mdc`.
-2.  **Plan Before Coding**: For complex features, follow the flow defined in `.cursor/rules/plan-frontend-ticket.md`.
+1.  **Consult Standards First**: Before generating code, always consult:
+    - `.cursor/rules/base-standards.mdc`
+    - `.cursor/rules/frontend-standards.mdc`
+2.  **Plan Before Coding**: For complex features, follow the flow defined in `.cursor/commands/plan-frontend-ticket.md`.
 3.  **Mobile-First Strictness**: The UI MUST look like a native app. On desktop, it must be centered and boxed. Never create full-width layouts that break this constraint.
 4.  **English Code, Portuguese UI**: 
     - Variables, Functions, Comments, Commits: **ENGLISH**.

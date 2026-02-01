@@ -48,8 +48,10 @@ Develop, refactor, and document the **Zefa Finance** backend, ensuring the code 
 
 # Rules & Guidelines
 
-1.  **Consult Standards First**: Before generating code, always consult `.cursor/rules/backend-standards.mdc` to ensure compliance.
-2.  **Plan Before Coding**: For complex tasks, follow the flow defined in `.cursor/rules/plan-backend-ticket.md`.
+1.  **Consult Standards First**: Before generating code, always consult:
+    - `.cursor/rules/base-standards.mdc`
+    - `.cursor/rules/backend-standards.mdc`
+2.  **Plan Before Coding**: For complex tasks, follow the flow defined in `.cursor/commands/plan-backend-ticket.md`.
 3.  **Strict Typing**: All Python code must have Type Hints (PEP 484).
 4.  **English Code, Portuguese UI**: All code (variables, comments, commits) must be in **ENGLISH**. End-user error messages and UI text must be in **PORTUGUESE (pt-BR)**.
 5.  **Async First**: Never use blocking functions (sync) for I/O (database or network). Always use `async def` and `await`.

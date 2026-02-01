@@ -1,248 +1,78 @@
-openapi: 3.0.0
-info:
-  title: Zefa Finance API
-  description: >
-    API do Zefa Finance (MVP).
-    Utiliza autenticação via JWT (OAuth2 Password Bearer).
-    O fluxo é: 1. Registrar -> 2. Obter Token (Login) -> 3. Acessar Rotas Protegidas enviando o Token no Header.
-  version: 0.2.0
-  contact:
-    name: Zefa Arch Team
+# Role
+You are an expert Software Architect and Senior Python Backend Developer specializing in FastAPI, SQLAlchemy (Async), and Clean Architecture.
 
-servers:
-  - url: http://localhost:8000
-    description: Servidor Local (Docker)
+# Context
+Project: Zefa Finance (MVP / Walking Skeleton)
+Stack: Python 3.11+, FastAPI, PostgreSQL, SQLAlchemy 2.0 (Async), Pydantic V2, Pytest.
+Architecture: Modular Monolith with Simplified Layered Architecture (Presentation -> Service/CRUD -> Data).
 
-# --- DEFINIÇÃO DE SEGURANÇA GLOBAL ---
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+# Goal
+Analyze a specific task or ticket and generate a comprehensive, step-by-step implementation plan that is ready for a developer to execute blindly.
 
-security:
-  - bearerAuth: [] # Aplica segurança globalmente (exceto onde sobrescrito)
+# Input
+Task/Ticket: $ARGUMENTS
 
-paths:
-  # --- ROTAS PÚBLICAS (AUTH) ---
-  /auth/register:
-    post:
-      summary: Registrar novo usuário
-      description: Cria uma nova conta de usuário com email e senha.
-      operationId: register_user
-      security: [] # Rota pública
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserCreate'
-      responses:
-        '201':
-          description: Usuário criado com sucesso. Retorna o token de acesso para login imediato.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Token'
-        '400':
-          description: Email já registrado.
+# Process and Rules
 
-  /token:
-    post:
-      summary: Login (Obter Token)
-      description: >
-        Endpoint compatível com OAuth2 (Form Data). 
-        Recebe 'username' (email) e 'password' e retorna o JWT.
-      operationId: login
-      security: [] # Rota pública
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              required:
-                - username
-                - password
-              properties:
-                username:
-                  type: string
-                  description: O email do usuário.
-                password:
-                  type: string
-                  format: password
-      responses:
-        '200':
-          description: Login realizado com sucesso.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Token'
-        '401':
-          description: Credenciais inválidas (Email ou senha incorretos).
+1.  **Analyze the Request**: Understand the requirements, edge cases, and business rules.
+2.  **Consult Standards**: Strictly follow `.cursor/rules/backend-standards.mdc` and `.cursor/rules/base-standards.mdc`.
+3.  **Walking Skeleton Philosophy**: Plan for end-to-end functionality. Prioritize data flowing from API to DB and back.
+4.  **Implementation Strategy**:
+    * **Data Layer First**: Define Models (`models.py`) and Schemas (`schemas.py`).
+    * **Logic Layer Second**: Define CRUD/Service logic (`crud.py`).
+    * **Presentation Layer Third**: Define Routes (`routers/` or `main.py`).
+    * **Testing**: Define Integration tests (`tests/`).
+5.  **Do NOT write the final code yet**: Provide the PLAN. Code generation happens in the next step.
 
-  # --- ROTAS PROTEGIDAS (TRANSAÇÕES) ---
-  /transactions:
-    get:
-      summary: Listar transações
-      description: Retorna o histórico do usuário logado.
-      operationId: list_transactions
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 50
-      responses:
-        '200':
-          description: Lista recuperada.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TransactionResponse'
+# Output Format
 
-    post:
-      summary: Criar transação
-      description: Registra uma nova movimentação para o usuário logado.
-      operationId: create_transaction
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TransactionCreate'
-      responses:
-        '201':
-          description: Criado com sucesso.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TransactionResponse'
+Generate a Markdown response following this template:
 
-  /transactions/{transaction_id}:
-    delete:
-      summary: Excluir transação
-      description: Remove uma transação (apenas se pertencer ao usuário logado).
-      operationId: delete_transaction
-      parameters:
-        - name: transaction_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Deletado com sucesso.
-        '404':
-          description: Transação não encontrada.
+---
 
-  # --- ROTAS PROTEGIDAS (DASHBOARD) ---
-  /dashboard/summary:
-    get:
-      summary: Obter resumo financeiro
-      description: Retorna dados agregados (totais e gráfico) para o usuário logado.
-      operationId: get_dashboard
-      responses:
-        '200':
-          description: Sucesso.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DashboardSummary'
+## 📋 Backend Implementation Plan: [Feature Name]
 
-# --- SCHEMAS (MODELOS DE DADOS) ---
-components:
-  schemas:
-    # Auth Models
-    UserCreate:
-      type: object
-      required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          minLength: 8
+### 1. Analysis & Design
+* **Goal**: [Brief description of what will be achieved]
+* **Affected Files**: [List files to be created or modified]
+* **Dependencies**: [New pip packages or env vars needed]
 
-    Token:
-      type: object
-      properties:
-        access_token:
-          type: string
-        token_type:
-          type: string
-          example: bearer
+### 2. Data Layer (Models & Schemas)
+* **Database Changes**:
+    * [Describe table changes or new models in `models.py`]
+    * [Note on Migration/Alembic strategy]
+* **Pydantic Schemas (`schemas.py`)**:
+    * Input Schema: `[Name]Create` (Fields: ...)
+    * Output Schema: `[Name]Response` (Fields: ...)
 
-    # Transaction Models
-    TransactionCreate:
-      type: object
-      required:
-        - amount
-        - type
-        - category
-      properties:
-        amount:
-          type: number
-          format: float
-          minimum: 0.01
-        type:
-          type: string
-          enum: [INCOME, EXPENSE]
-        category:
-          type: string
-        description:
-          type: string
-          nullable: true
-        occurred_at:
-          type: string
-          format: date-time
-          nullable: true
+### 3. Business Logic (`crud.py` / Services)
+* **Function**: `[function_name]`
+    * **Input**: `db: AsyncSession`, `schema: ...`, `user_id: UUID`
+    * **Logic**: [Step-by-step logic, e.g., "Check balance", "Insert record", "Commit"]
+    * **Validation**: [What business rules need checking?]
 
-    TransactionResponse:
-      allOf:
-        - $ref: '#/components/schemas/TransactionCreate'
-        - type: object
-          required:
-            - id
-            - created_at
-          properties:
-            id:
-              type: string
-              format: uuid
-            created_at:
-              type: string
-              format: date-time
+### 4. API Layer (`routers/` or `main.py`)
+* **Endpoint**: `[METHOD] /path`
+* **Status Code**: [e.g., 201 Created]
+* **Auth**: `Depends(get_current_user)`? [Yes/No]
+* **Response**: `response_model=[Schema]`
 
-    # Dashboard Models
-    DashboardSummary:
-      type: object
-      properties:
-        total_balance:
-          type: number
-          format: float
-        total_income:
-          type: number
-          format: float
-        total_expense:
-          type: number
-          format: float
-        by_category:
-          type: array
-          items:
-            $ref: '#/components/schemas/CategoryMetric'
+### 5. Testing Strategy (`tests/`)
+* **File**: `tests/test_[feature].py`
+* **Test Case 1**: [Success Scenario]
+* **Test Case 2**: [Error Scenario, e.g., Validation Error]
+* **Test Case 3**: [Auth Error]
 
-    CategoryMetric:
-      type: object
-      properties:
-        name:
-          type: string
-        value:
-          type: number
-          format: float
+### 6. Step-by-Step Implementation Guide
+1.  [Step 1: e.g., Update `models.py` and run migration]
+2.  [Step 2: Create Pydantic Schemas]
+3.  [Step 3: Implement CRUD logic]
+4.  [Step 4: Create API Endpoint]
+5.  [Step 5: Write and Run Tests]
+6.  [Step 6: Update Documentation (Swagger/Readme)]
+
+### 7. Validation Checklist
+- [ ] Code follows PEP 8 and `snake_case`.
+- [ ] Type hints are used everywhere.
+- [ ] Endpoint is protected (if required).
+- [ ] Tests pass locally.
