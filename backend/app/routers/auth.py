@@ -10,10 +10,10 @@ from app.auth_utils import create_access_token, get_current_user
 from app.database import get_db
 from app.models import User
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(tags=["auth"])
 
 
-@router.post("/register", response_model=schemas.Token, status_code=status.HTTP_201_CREATED)
+@router.post("/auth/register", response_model=schemas.Token, status_code=status.HTTP_201_CREATED)
 async def register(
     user_in: schemas.UserCreate,
     db: AsyncSession = Depends(get_db),
@@ -65,7 +65,7 @@ async def login(
     return schemas.Token(access_token=access_token, token_type="bearer")
 
 
-@router.get("/me")
+@router.get("/auth/me")
 async def get_current_user_info(
     current_user: User = Depends(get_current_user),
 ) -> dict:

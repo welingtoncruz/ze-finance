@@ -194,8 +194,8 @@ async def test_delete_transaction_not_found(async_client: AsyncClient, test_user
 async def test_delete_transaction_other_user(async_client: AsyncClient) -> None:
     """Test deleting another user's transaction returns 404."""
     # Arrange - Create two users
-    user1_data = {"email": "owner@example.com", "password": "pass123"}
-    user2_data = {"email": "other@example.com", "password": "pass123"}
+    user1_data = {"email": "owner@example.com", "password": "password123"}
+    user2_data = {"email": "other@example.com", "password": "password123"}
     
     resp1 = await async_client.post("/auth/register", json=user1_data)
     resp2 = await async_client.post("/auth/register", json=user2_data)

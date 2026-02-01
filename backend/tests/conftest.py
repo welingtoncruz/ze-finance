@@ -74,7 +74,7 @@ async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, 
     app.dependency_overrides.clear()
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 async def test_user(async_client: AsyncClient) -> dict:
     """
     Create a test user and return user data and token.

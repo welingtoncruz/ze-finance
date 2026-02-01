@@ -17,7 +17,12 @@ from app.database import get_db
 from app.models import User
 
 # Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Configure bcrypt backend explicitly to avoid compatibility issues
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__ident="2b",  # Use bcrypt 2b identifier
+)
 
 # OAuth2 scheme for token extraction
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")

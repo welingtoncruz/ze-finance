@@ -88,11 +88,13 @@ async def test_dashboard_summary_empty(async_client: AsyncClient, test_user: dic
 async def test_dashboard_summary_isolation(async_client: AsyncClient) -> None:
     """Test dashboard summary only includes data for authenticated user."""
     # Arrange - Create two users
-    user1_data = {"email": "dash1@example.com", "password": "pass123"}
-    user2_data = {"email": "dash2@example.com", "password": "pass123"}
+    user1_data = {"email": "dash1@example.com", "password": "password123"}
+    user2_data = {"email": "dash2@example.com", "password": "password123"}
     
     resp1 = await async_client.post("/auth/register", json=user1_data)
     resp2 = await async_client.post("/auth/register", json=user2_data)
+    assert resp1.status_code == 201, f"Expected 201, got {resp1.status_code}: {resp1.json()}"
+    assert resp2.status_code == 201, f"Expected 201, got {resp2.status_code}: {resp2.json()}"
     token1 = resp1.json()["access_token"]
     token2 = resp2.json()["access_token"]
     headers1 = {"Authorization": f"Bearer {token1}"}
