@@ -1,0 +1,227 @@
+---
+description: Backend development standards, best practices, and conventions for the Zefa Finance application (Python/FastAPI/SQLAlchemy), including simplified Clean Architecture, SOLID principles, and API standards.
+globs: ["backend/**/*.py", "backend/requirements.txt", "backend/Dockerfile", "backend/alembic.ini"]
+alwaysApply: true
+---
+
+# Backend Project Standards and Best Practices - Zefa Finance
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Technology Stack](#technology-stack)
+- [Architecture](#architecture)
+  - [Project Structure](#project-structure)
+  - [Layered Architecture](#layered-architecture)
+- [Code Principles](#code-principles)
+  - [SOLID and DRY](#solid-and-dry)
+  - [Naming Conventions (Python)](#naming-conventions-python)
+  - [Type Hinting](#type-hinting)
+- [API Standards (FastAPI)](#api-standards-fastapi)
+  - [Routes and Controllers](#routes-and-controllers)
+  - [Request/Response (Pydantic)](#requestresponse-pydantic)
+  - [Error Handling](#error-handling)
+- [Database Standards](#database-standards)
+  - [SQLAlchemy Async](#sqlalchemy-async)
+  - [Migrations](#migrations)
+- [Testing Standards](#testing-standards)
+  - [Pytest](#pytest)
+  - [AAA Structure](#aaa-structure)
+- [Security](#security)
+
+---
+
+## Overview
+
+This document defines the backend standards for **Zefa Finance**. The goal is to maintain clean, readable, and scalable code, facilitating the transition from the current MVP ("Walking Skeleton") to future phases involving AI and WhatsApp integration.
+
+## Technology Stack
+
+### Core
+- **Runtime:** Python 3.11+
+- **API Framework:** FastAPI (Async)
+- **Validation:** Pydantic V2
+- **Server:** Uvicorn
+
+### Data
+- **Database:** PostgreSQL 15
+- **ORM:** SQLAlchemy 2.0 (Async)
+- **Driver:** AsyncPG
+- **Migrations:** Alembic (Future/Recommended)
+
+### Testing
+- **Framework:** Pytest
+- **Client:** HTTPX / TestClient
+- **Coverage Goal:** 80% (Focus on business logic and critical routes)
+
+### Local Infrastructure
+- **Container:** Docker & Docker Compose
+
+---
+
+## Architecture
+
+The project follows a **Simplified Clean Architecture** for the MVP, separating responsibilities while avoiding premature abstraction ("Over-engineering").
+
+### Project Structure
+
+```text
+backend/
+├── app/
+│   ├── main.py            # Entrypoint and App configuration
+│   ├── models.py          # Database Models (SQLAlchemy) - "Entities"
+│   ├── schemas.py         # Input/Output Schemas (Pydantic) - "DTOs"
+│   ├── crud.py            # Data Access Logic - Simplified "Repository Pattern"
+│   ├── database.py        # DB Connection Configuration (SessionLocal)
+│   ├── auth_utils.py      # JWT Logic and Password Hashing
+│   └── routers/           # (Optional) If main.py grows, split routes here
+├── tests/
+│   ├── conftest.py        # Pytest Fixtures (In-memory DB, Clients)
+│   ├── test_auth.py
+│   └── test_transactions.py
+├── requirements.txt
+└── Dockerfile
+Layered Architecture
+Presentation Layer (Routes): Defined in main.py (or routers/). Responsible for receiving HTTP requests, validating tokens, and calling the CRUD/Service layer. Must not contain complex business logic.
+
+Application/Domain Layer (CRUD/Services): Defined in crud.py. Contains business logic (e.g., "Create user only if email does not exist") and database calls.
+
+Data Layer (Models/Schemas):
+
+models.py: The database truth.
+
+schemas.py: The API truth (what the user sees/sends).
+
+Code Principles
+SOLID and DRY
+SRP (Single Responsibility Principle): A route should not validate data, save to the database, and send an email. The route validates (Pydantic), the Service saves (CRUD).
+
+DRY (Don't Repeat Yourself): If you validate "insufficient balance" in two places, move it to a validate_balance() function in a Service.
+
+Naming Conventions (Python PEP 8)
+Variables and Functions: snake_case
+
+user_id, get_transaction_by_id()
+
+Classes: PascalCase
+
+UserCreate, TransactionRepository
+
+Constants: UPPER_SNAKE_CASE
+
+ACCESS_TOKEN_EXPIRE_MINUTES, DATABASE_URL
+
+Files: snake_case
+
+auth_utils.py, models.py
+
+Example:
+
+Python
+# Good
+class TransactionResponse(BaseModel):
+    total_amount: float
+
+def calculate_tax(amount: float) -> float:
+    return amount * 0.1
+
+# Bad
+class transactionResponse(BaseModel): # Wrong: PascalCase required for classes
+    TotalAmount: float # Wrong: snake_case required for attributes
+
+def CalculateTax(Amount): # Wrong: snake_case required for functions/args
+    pass
+Type Hinting
+Static type hinting is mandatory in function signatures.
+
+Python
+# Good
+def get_user(db: AsyncSession, user_id: UUID) -> Optional[User]:
+    pass
+
+# Bad
+def get_user(db, user_id):
+    pass
+API Standards (FastAPI)
+Routes and Controllers
+Use correct decorators: @app.get, @app.post, @app.put, @app.delete.
+
+Use dependency injection for Database and Current User.
+
+Python
+@app.post("/transactions/", response_model=TransactionResponse, status_code=201)
+async def create_transaction(
+    tx: TransactionCreate, 
+    current_user: UserDB = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # Logic delegates to CRUD layer
+    return await crud.create_user_transaction(db, tx, current_user.id)
+Request/Response (Pydantic)
+Never return the SQLAlchemy object (models.py) directly if it contains sensitive data (e.g., hashed_password). Always use a Pydantic response_model (schemas.py).
+
+Use ConfigDict(from_attributes=True) in response schemas for ORM compatibility.
+
+Error Handling
+Use HTTPException from FastAPI.
+
+Python
+if not user:
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="User not found"
+    )
+Database Standards
+SQLAlchemy Async
+All database operations must be async/await.
+
+Use the session (AsyncSession) injected via Depends(get_db).
+
+Avoid business logic inside Models.
+
+Query Example:
+
+Python
+# crud.py
+async def get_transactions(db: AsyncSession, user_id: UUID, limit: int = 50):
+    result = await db.execute(
+        select(TransactionDB)
+        .where(TransactionDB.user_id == user_id)
+        .order_by(TransactionDB.occurred_at.desc())
+        .limit(limit)
+    )
+    return result.scalars().all()
+Migrations
+Do not alter the database manually.
+
+For the initial MVP, Base.metadata.create_all is acceptable, but migrate to Alembic as soon as you need to alter an existing table without data loss.
+
+Testing Standards
+Pytest
+Tests must be isolated. Use conftest.py to create a temporary database (In-memory SQLite or test container) for each test session.
+
+Use AsyncClient to test asynchronous routes.
+
+AAA Structure (Arrange, Act, Assert)
+Python
+async def test_create_transaction(async_client, auth_token):
+    # Arrange
+    payload = {"amount": 100.0, "type": "EXPENSE", "category": "Food"}
+    headers = {"Authorization": f"Bearer {auth_token}"}
+    
+    # Act
+    response = await async_client.post("/transactions/", json=payload, headers=headers)
+    
+    # Assert
+    assert response.status_code == 201
+    data = response.json()
+    assert data["amount"] == 100.0
+    assert "id" in data
+Security
+Passwords: Never store passwords in plain text. Use passlib with bcrypt.
+
+JWT: Tokens must have an expiration time (ACCESS_TOKEN_EXPIRE_MINUTES).
+
+CORS: In development, allow_origins=["*"] is acceptable. In production, restrict to the frontend domain.
+
+Environment Variables: Secrets (Secret Key, DB Password) must come from environment variables (os.getenv), never hardcoded in the source code.

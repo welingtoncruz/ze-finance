@@ -1,0 +1,1 @@
+Use `.cursor/rules/documentation-standards.mdc` to update whatever documentation is needed according to the changes made
