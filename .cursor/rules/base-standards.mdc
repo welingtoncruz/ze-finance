@@ -10,6 +10,7 @@ alwaysApply: true
 
 - **Walking Skeleton First**: Prioritize establishing end-to-end connectivity (Frontend -> API -> DB) over perfecting isolated components. A feature is only "done" when it works in the browser.
 - **Small Steps**: Make atomic changes. Do not try to implement Auth, Transactions, and Dashboard in a single commit.
+- **Responsive-First UX**: Build layouts and interactions that feel intentional on desktop, tablet, and mobile (avoid “phone-only” layouts on large screens).
 - **Strict Typing**: 
   - **Python**: Mandatory use of Type Hints (PEP 484) in all function signatures. Use Pydantic for data validation.
   - **TypeScript**: No `any`. All props and state must have defined interfaces.

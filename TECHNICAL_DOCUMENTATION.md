@@ -1,6 +1,6 @@
 ## Ze Finance (Zefa) — Technical Documentation
 
-This document consolidates the technical documentation for the **Ze Finance (Zefa)** project. It is designed to be the single starting point for developers and reviewers.
+This document consolidates the technical documentation for the **Ze Finance** project. The system name is **Ze Finance**, and the AI chat assistant is named **Zefa** (masculine). It is designed to be the single starting point for developers and reviewers.
 
 ### 1) Product documentation
 
@@ -14,12 +14,18 @@ Build an MVP personal finance assistant focused on a **Walking Skeleton**: a com
 - **Authentication**
   - Register user
   - Login and obtain JWT token
+  - Mobile logout access via account drawer
 - **Transactions**
   - List transactions (owned by logged-in user)
-  - Create transaction (income/expense)
+  - Create transaction (income/expense) with icon-grid category selection
+  - Edit transaction (UI-only, local persistence; backend endpoint pending)
   - Delete transaction (owned by logged-in user)
 - **Dashboard**
   - Summary totals (balance, income, expense) and breakdown by category
+- **Chat (Preview)**
+  - Interactive chat interface with Zefa assistant (masculine)
+  - Simulated responses for financial queries
+  - Coming soon messaging integrated into chat flow
 
 #### Non-goals (MVP)
 - Complex budgeting rules, recurring transactions, multi-currency, bank integrations, or advanced analytics.
@@ -124,9 +130,12 @@ Authoritative contract: `ai-specs/specs/api-spec.yml`.
 - **Transactions** (protected, require JWT bearer token)
   - `GET /transactions?limit=50` → list user transactions
   - `POST /transactions` → create user transaction
+  - `PUT/PATCH /transactions/{transaction_id}` → update user transaction (pending implementation)
   - `DELETE /transactions/{transaction_id}` → delete user transaction
 - **Dashboard** (protected)
   - `GET /dashboard/summary` → aggregated totals and category breakdown
+
+**Note:** Transaction editing is currently implemented as local-only in the frontend (with localStorage persistence) until the backend update endpoint is available.
 
 #### Security requirements (MVP)
 - Passwords must be stored hashed (never plaintext).
@@ -149,7 +158,7 @@ Minimum navigable flow:
 6. Delete transaction → refresh list/summary
 
 #### UX constraints
-- Mobile-first layout, centered container on desktop (e.g. `max-w-md mx-auto`).
+- Responsive-first layout across desktop/tablet/mobile (avoid “phone frame” constraints on desktop).
 - No `any` types in TypeScript.
 - Use a centralized API client (Axios instance) and handle 401 redirect to login.
 
@@ -188,13 +197,35 @@ Minimum E2E scenario (tooling example: Playwright/Cypress):
 ### 7) Infra and deployment
 
 #### Local infrastructure
-Authoritative setup reference: `ai-specs/specs/development_guide.md`.
-- Docker Compose recommended for PostgreSQL (and optionally full stack).
+Authoritative setup reference: `ai-specs/specs/development_guide.md` and `backend/README.md`.
+
+**Database Setup (Docker Compose)**
+- PostgreSQL 15 is provided via Docker Compose for consistent local development
+- Start database: `docker compose up -d db` (from repo root)
+- Database credentials (default): `postgres/postgres_password` on `localhost:5433` (port 5433 to avoid conflicts)
+- Database name: `zefa_db`
+- Optional Adminer UI: `docker compose --profile tools up -d adminer` (access at http://localhost:8080)
+
+**Backend Setup**
+- Copy `backend/.env.example` to `backend/.env`
+- Install dependencies: `pip install -r requirements.txt`
+- Run server: `python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --env-file .env`
+- API available at http://localhost:8000 (docs at `/docs`)
+
+**Frontend Setup**
+- Copy `frontend/.env.example` to `frontend/.env.local`
+- Install dependencies: `npm install` (from `frontend/` directory)
+- Run dev server: `npm run dev` (from `frontend/` directory)
+- Frontend available at http://localhost:3000
+
+**Testing**
+- Tests use SQLite in-memory database and don't require Docker
+- Run tests: `python -m pytest -v` (from `backend/` directory)
 
 #### CI/CD pipeline (basic)
 Minimum CI pipeline should run on every PR:
-- Backend: lint/format check (if configured), typecheck (if configured), and `pytest`
-- Frontend: `npm run lint` and `npm run build`
+- Backend: lint/format check (if configured), typecheck (if configured), and `pytest` (from `backend/` directory)
+- Frontend: `npm run lint` and `npm run build` (from `frontend/` directory)
 
 Recommended CI steps:
 - Cache dependencies (pip/npm)
@@ -203,7 +234,7 @@ Recommended CI steps:
 #### Secrets management (minimum)
 - Never commit secrets.
 - Use environment files locally (`backend/.env`, `frontend/.env.local`) and CI secrets in the CI provider.
-- Provide `.env.example` files for both backend and frontend (recommended).
+- Provide `.env.example` files for both backend (`backend/.env.example`) and frontend (`frontend/.env.example`) (recommended).
 
 #### Public URL / accessible environment
 - Recommended approach:
