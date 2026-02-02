@@ -7,7 +7,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Transaction, User
@@ -177,20 +177,16 @@ async def delete_user_transaction(
     Raises:
         HTTPException: If transaction doesn't belong to user (404)
     """
+    # Use delete statement with WHERE clause for atomic operation
     result = await db.execute(
-        select(Transaction).where(
-            Transaction.id == transaction_id,
-            Transaction.user_id == user_id,
+        delete(Transaction).where(
+            (Transaction.id == transaction_id) & (Transaction.user_id == user_id)
         )
     )
-    transaction = result.scalar_one_or_none()
-    
-    if not transaction:
-        return False
-    
-    await db.delete(transaction)
     await db.commit()
-    return True
+    
+    # Return True if a row was deleted, False otherwise
+    return result.rowcount > 0
 
 
 # Dashboard CRUD

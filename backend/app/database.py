@@ -10,7 +10,7 @@ from sqlalchemy.orm import declarative_base
 # Get database URL from environment
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+asyncpg://postgres:postgres_password@localhost:5432/zefa_db"
+    "postgresql+asyncpg://postgres:postgres_password@localhost:5433/zefa_db"
 )
 
 # Create async engine

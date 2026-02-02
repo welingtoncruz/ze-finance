@@ -26,7 +26,7 @@ async def test_create_transaction_success(async_client: AsyncClient, test_user: 
     # Assert
     assert response.status_code == 201
     data = response.json()
-    assert data["amount"] == "100.50"
+    assert float(data["amount"]) == 100.50
     assert data["type"] == "EXPENSE"
     assert data["category"] == "Food"
     assert data["description"] == "Lunch"
@@ -96,7 +96,7 @@ async def test_list_transactions_isolation(async_client: AsyncClient) -> None:
     assert response1.status_code == 200
     transactions1 = response1.json()
     assert len(transactions1) == 1
-    assert transactions1[0]["amount"] == "50.00"
+    assert float(transactions1[0]["amount"]) == 50.0
     assert transactions1[0]["type"] == "EXPENSE"
     
     # Act - List transactions for user2
@@ -106,7 +106,7 @@ async def test_list_transactions_isolation(async_client: AsyncClient) -> None:
     assert response2.status_code == 200
     transactions2 = response2.json()
     assert len(transactions2) == 1
-    assert transactions2[0]["amount"] == "200.00"
+    assert float(transactions2[0]["amount"]) == 200.0
     assert transactions2[0]["type"] == "INCOME"
 
 
