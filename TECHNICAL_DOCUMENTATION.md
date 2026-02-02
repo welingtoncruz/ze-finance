@@ -149,7 +149,7 @@ Minimum navigable flow:
 6. Delete transaction → refresh list/summary
 
 #### UX constraints
-- Mobile-first layout, centered container on desktop (e.g. `max-w-md mx-auto`).
+- Responsive-first layout across desktop/tablet/mobile (avoid “phone frame” constraints on desktop).
 - No `any` types in TypeScript.
 - Use a centralized API client (Axios instance) and handle 401 redirect to login.
 
@@ -188,8 +188,24 @@ Minimum E2E scenario (tooling example: Playwright/Cypress):
 ### 7) Infra and deployment
 
 #### Local infrastructure
-Authoritative setup reference: `ai-specs/specs/development_guide.md`.
-- Docker Compose recommended for PostgreSQL (and optionally full stack).
+Authoritative setup reference: `ai-specs/specs/development_guide.md` and `backend/README.md`.
+
+**Database Setup (Docker Compose)**
+- PostgreSQL 15 is provided via Docker Compose for consistent local development
+- Start database: `docker compose up -d db` (from repo root)
+- Database credentials (default): `postgres/postgres_password` on `localhost:5433` (port 5433 to avoid conflicts)
+- Database name: `zefa_db`
+- Optional Adminer UI: `docker compose --profile tools up -d adminer` (access at http://localhost:8080)
+
+**Backend Setup**
+- Copy `backend/.env.example` to `backend/.env`
+- Install dependencies: `pip install -r requirements.txt`
+- Run server: `python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --env-file .env`
+- API available at http://localhost:8000 (docs at `/docs`)
+
+**Testing**
+- Tests use SQLite in-memory database and don't require Docker
+- Run tests: `python -m pytest -v` (from `backend/` directory)
 
 #### CI/CD pipeline (basic)
 Minimum CI pipeline should run on every PR:
