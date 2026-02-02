@@ -9,8 +9,6 @@ export interface Transaction {
   description?: string
 }
 
-export type ViewType = "auth" | "onboarding" | "dashboard" | "add" | "transactions" | "insights" | "chat"
-
 export interface ChatMessage {
   id: string
   role: "user" | "assistant"
@@ -30,9 +28,3 @@ export interface UserProfile {
   totalSaved: number
 }
 
-export interface InsightData {
-  type: "warning" | "success" | "tip"
-  title: string
-  message: string
-  icon: string
-}

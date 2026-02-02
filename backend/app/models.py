@@ -1,8 +1,6 @@
 """
 SQLAlchemy database models for Zefa Finance MVP.
 """
-from datetime import datetime
-from decimal import Decimal
 from uuid import uuid4
 
 from sqlalchemy import (
