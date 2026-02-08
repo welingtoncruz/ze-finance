@@ -9,6 +9,17 @@ interface InsightsCardProps {
   monthlyBudget: number
 }
 
+type InsightType = "tip" | "warning"
+
+interface Insight {
+  type: InsightType
+  icon: typeof Lightbulb | typeof AlertTriangle | typeof TrendingDown | typeof TrendingUp
+  title: string
+  message: string
+  color: string
+  bg: string
+}
+
 export function InsightsCard({ transactions, monthlyBudget }: InsightsCardProps) {
   const thisMonth = new Date().toISOString().slice(0, 7)
   
@@ -31,8 +42,8 @@ export function InsightsCard({ transactions, monthlyBudget }: InsightsCardProps)
     .sort(([, a], [, b]) => b - a)[0]
 
   // Generate insight
-  let insight = {
-    type: "tip" as const,
+  let insight: Insight = {
+    type: "tip",
     icon: Lightbulb,
     title: "Começando",
     message: "Adicione transações para ver insights personalizados!",

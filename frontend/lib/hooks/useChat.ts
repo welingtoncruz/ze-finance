@@ -4,40 +4,19 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import type { ChatMessage } from "@/lib/types"
 import { sendChatMessage } from "@/lib/chat/service"
-import type { ApiTransactionCreatedData } from "@/lib/types/api"
-
 // Storage key: For MVP, using default. In future, can be scoped to userId if available
 // Example: `zefa_chat_v1:${userId}` for multi-user support
 const STORAGE_KEY = "zefa_chat_v1:default"
 
+/** Persisted format matches ChatMessage, with timestamp as ISO string */
 interface PersistedChatMessage {
   id: string
   role: "user" | "assistant"
   content: string
-  timestamp: string // ISO string
+  timestamp: string // ISO string (ChatMessage uses Date)
   status?: "sending" | "sent" | "error"
   kind?: "text" | "transaction_confirmation" | "ui_event"
-  meta?: {
-    transactionCreated?: boolean
-    data?: ApiTransactionCreatedData
-    uiEvent?: {
-      type: "success_card" | "warning_card" | "info_card"
-      variant: "neon"
-      accent: "electric_lime" | "deep_indigo"
-      title: string
-      subtitle?: string | null
-      data?: {
-        transaction?: {
-          id: string
-          amount: number
-          type: "INCOME" | "EXPENSE"
-          category: string
-          description?: string | null
-          occurred_at?: string | null
-        }
-      } | null
-    }
-  }
+  meta?: ChatMessage["meta"]
   errorCode?: string
   errorMessage?: string
 }

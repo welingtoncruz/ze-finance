@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AppShell } from "@/components/layout/AppShell"
 import { TransactionsScreen } from "@/components/transactions/TransactionsScreen"
@@ -18,7 +18,7 @@ import {
 import type { Transaction, UserProfile } from "@/lib/types"
 import { toast } from "sonner"
 
-export default function TransactionsPage() {
+function TransactionsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { isAuthenticated, isHydrated } = useAuth()
@@ -261,5 +261,21 @@ export default function TransactionsPage() {
         onSave={handleSaveEdit}
       />
     </AppShell>
+  )
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background bg-mesh-gradient flex items-center justify-center">
+          <div className="relative">
+            <div className="h-16 w-16 rounded-2xl bg-primary/20 animate-pulse" />
+          </div>
+        </div>
+      }
+    >
+      <TransactionsPageContent />
+    </Suspense>
   )
 }
