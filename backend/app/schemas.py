@@ -40,6 +40,31 @@ class TransactionCreate(BaseModel):
         return v
 
 
+class TransactionUpdate(BaseModel):
+    """Schema for updating a transaction (partial update, all fields optional)."""
+    amount: Optional[Decimal] = Field(default=None, gt=0, description="Amount must be positive if provided")
+    type: Optional[str] = Field(default=None, pattern="^(INCOME|EXPENSE)$")
+    category: Optional[str] = None
+    description: Optional[str] = None
+    occurred_at: Optional[datetime] = None
+
+    @field_validator("type")
+    @classmethod
+    def validate_type(cls, v: Optional[str]) -> Optional[str]:
+        """Validate transaction type."""
+        if v is not None and v not in ("INCOME", "EXPENSE"):
+            raise ValueError("type must be either INCOME or EXPENSE")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, v: Optional[str]) -> Optional[str]:
+        """Validate category is non-empty if provided."""
+        if v is not None and not v.strip():
+            raise ValueError("category must be non-empty if provided")
+        return v.strip() if v else None
+
+
 class TransactionResponse(BaseModel):
     """Schema for transaction response."""
     id: UUID

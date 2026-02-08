@@ -79,10 +79,29 @@ Ze Finance is designed to help individuals track their personal finances through
 - Breakdown by category
 - Real-time updates when transactions are added or removed
 
-#### **Chat (Preview)**
-- Interactive chat interface with Zefa assistant (masculine)
-- Simulated responses for financial queries
-- Coming soon messaging integrated into chat flow
+#### **Chat (AI Agent)**
+- Interactive chat interface with Zefa AI assistant (masculine)
+- Real-time text-based conversations via POST `/chat/messages` endpoint (returns message and UI metadata envelope)
+- Natural language queries for financial data ("Qual meu saldo?")
+- Tool-based function calling to query and mutate user data:
+  - Get balance (`get_balance`)
+  - List transactions (`list_transactions`)
+  - Create transactions via natural language (`create_transaction`)
+  - Analyze spending patterns (`analyze_spending`)
+- Conversation memory persistence with summarization support
+- Ephemeral API key management (in-memory, TTL-based)
+- Provider-agnostic AI gateway (OpenAI/Anthropic support)
+- Strict data isolation: all queries scoped by authenticated user_id
+- **Frontend Integration (feat-9)**:
+  - Backend-integrated chat UI replacing simulated responses
+  - Optimistic UI with immediate message display
+  - localStorage persistence for conversation continuity (survives browser close/reopen)
+  - Markdown GFM rendering for assistant messages (bold, lists, links, code blocks)
+  - Theme-aligned bubble colors (primary for user, muted for assistant)
+  - Auto-scroll and typing indicators
+  - Error handling with retry functionality
+  - Transaction confirmation cards (Electric Lime styling)
+  - Responsive-first design (mobile/tablet/desktop)
 
 ### **1.3. Design and User Experience:**
 
@@ -303,10 +322,21 @@ ze-finance/
 │   │   ├── ui/                # ShadcnUI primitives
 │   │   ├── layout/            # Header/sidebar/bottom-nav
 │   │   ├── dashboard/         # Dashboard widgets
+│   │   ├── chat/              # Chat components
+│   │   │   ├── ZefaChatScreen.tsx
+│   │   │   ├── ChatBubble.tsx
+│   │   │   ├── TypingIndicator.tsx
+│   │   │   └── TransactionConfirmationCard.tsx
 │   │   └── forms/             # Reusable form components
 │   ├── lib/
 │   │   ├── api.ts             # Axios instance & interceptors
-│   │   └── utils.ts            # Helpers (format currency, etc.)
+│   │   ├── chat/              # Chat service layer
+│   │   │   └── service.ts     # API normalization
+│   │   ├── hooks/             # React hooks
+│   │   │   └── useChat.ts     # Chat state management
+│   │   ├── types/             # TypeScript types
+│   │   │   └── api.ts         # API types
+│   │   └── utils.ts           # Helpers (format currency, etc.)
 │   ├── context/
 │   │   └── AuthContext.tsx    # Auth logic & user state
 │   └── public/                # Static assets
@@ -397,7 +427,7 @@ flowchart TB
 - **Backend + DB**: Deploy to managed platform (e.g., Render/Fly/Railway)
 - **Configuration**:
   - Set `ALLOWED_ORIGINS` in backend to frontend domain
-  - Set `NEXT_PUBLIC_API_URL` in frontend to backend domain
+  - Set `NEXT_PUBLIC_API_BASE_URL` in frontend to backend domain
   - Use environment variables for all secrets
 
 **CI/CD Pipeline (Basic):**
@@ -511,7 +541,7 @@ async def test_create_transaction(async_client, auth_token):
 - **E2E Tests**: Full user flow tests (register → login → create transaction → verify dashboard)
 
 **Test Results:**
-- ✅ 33 frontend tests passing
+- ✅ 60 frontend tests passing (unit, integration, and E2E)
 
 #### **E2E Test (Main Flow)**
 
@@ -1194,7 +1224,7 @@ The project follows strict development standards enforced through Cursor IDE rul
 
 - **Walking Skeleton First**: End-to-end flow before over-engineering
 - **Strict Typing**: Python type hints + no `any` in TypeScript
-- **Language Rule**: Technical artifacts in **English**; user-facing UI text in **Portuguese (pt-BR)**
+- **Language Rule**: Technical artifacts in **English**; user-facing UI text in **Portuguese (pt-BR)**. All labels, placeholders, toasts, empty states, and aria-labels must be in pt-BR; add new copy in Portuguese.
 - **Small Steps**: Atomic changes, one feature at a time
 - **YAGNI**: Avoid complex patterns not needed for MVP
 
@@ -1227,11 +1257,82 @@ The project follows strict development standards enforced through Cursor IDE rul
 - ✅ End-to-end flow working (Frontend → API → DB)
 - ✅ Authentication and transaction management
 - ✅ Dashboard with summary and category breakdown
+- ✅ Chat interface with backend integration (feat-9)
 - 🔄 Transaction editing (UI-only, backend pending)
-- 🔄 Chat interface (preview/mockup)
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** February 2, 2026  
+---
+
+### **Ticket 4: Frontend - Chat Integration (feat-9)**
+
+**Story ID:** Implements Chat feature frontend integration
+
+**Module:** Frontend
+
+**Impact:**
+- UI changes: Chat interface now integrated with backend API
+- State management: New `useChat` hook with localStorage persistence (long-term)
+- Component architecture: New chat components (ChatBubble with Markdown rendering, TypingIndicator, TransactionConfirmationCard)
+- Message rendering: Markdown GFM support for assistant messages
+- Theme consistency: Chat bubble colors aligned with app theme tokens
+- API integration: Chat service layer with normalization
+
+**Description:**
+Replace the simulated chat interface with a fully integrated backend-connected chat UI that provides optimistic updates, error handling, and transaction confirmation feedback.
+
+**Technical Details:**
+
+**New Components:**
+- `ChatBubble.tsx`: Renders individual messages with Markdown GFM support, status indicators, and retry functionality
+- `TypingIndicator.tsx`: Shows "Zefa está digitando..." animation
+- `TransactionConfirmationCard.tsx`: Electric Lime styled success card for transaction confirmations
+
+**State Management:**
+- `useChat` hook (`lib/hooks/useChat.ts`): Manages chat state, localStorage persistence, and API interactions
+- Hydration gating: Prevents overwriting persisted state on initial mount
+- Optimistic UI: User messages appear immediately with "sending" status
+- Error handling: Failed messages show retry buttons
+- localStorage: Conversation persists across page navigations and browser close/reopen (key: `zefa_chat_v1:default`)
+
+**API Service Layer:**
+- `lib/chat/service.ts`: Normalization layer for backend API
+- Calls `POST /chat/messages` which returns an envelope with message and UI metadata
+- Error mapping: Timeout, network errors, 401 redirects
+
+**Styling:**
+- Added Electric Lime color tokens (`--electric-lime`, `--electric-lime-foreground`) for transaction confirmations
+- Responsive-first design maintained
+
+**Testing:**
+- Integration tests: 10 tests covering UI flows, error handling, persistence
+- Unit tests: 10 tests for `useChat` hook logic
+- Unit tests: 7 tests for chat service API layer
+- All tests passing (60 total frontend tests)
+
+**Docs Updates Required:**
+- Updated `PROJECT_DOCUMENTATION.md` with chat integration details
+- Updated `TECHNICAL_DOCUMENTATION.md` with frontend architecture changes
+- Updated `PROMPTS.md` with implementation details
+
+**Acceptance Criteria:**
+- [x] Uses `api` instance from `@/lib/api` (Axios)
+- [x] Chat is text-only (no voice/image UI)
+- [x] Optimistic UI: user message appears immediately with `sending` state
+- [x] localStorage persistence keeps conversation across page navigations and browser close/reopen
+- [x] Markdown GFM rendering for assistant messages (no raw asterisks)
+- [x] Theme-aligned chat bubble colors (primary for user, muted for assistant)
+- [x] Auto-scroll always lands on the latest message
+- [x] Typing indicator appears while awaiting backend response
+- [x] Confirmation card ready for `transaction_created` (requires backend metadata)
+- [x] Timeout + network errors show retry UI
+- [x] JWT expiration is handled gracefully (401 redirects to login)
+- [x] Responsive-first: mobile keyboard safe-area, desktop layout not constrained
+- [x] No `any` types in TypeScript
+- [x] Comprehensive test coverage (27 new tests)
+
+---
+
+**Document Version:** 1.1  
+**Last Updated:** February 4, 2026  
 **Author:** Wellington Cruz

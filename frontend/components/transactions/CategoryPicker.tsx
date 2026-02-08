@@ -1,7 +1,8 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { getCategoriesByType } from "@/lib/transactions/categories"
+import { getCategoriesByType, resolveCategoryValue, type CategoryDefinition } from "@/lib/transactions/categories"
+import { CircleDot } from "lucide-react"
 import type { TransactionType } from "@/lib/types"
 
 interface CategoryPickerProps {
@@ -18,15 +19,37 @@ export function CategoryPicker({
   variant = "regular",
 }: CategoryPickerProps) {
   const categories = getCategoriesByType(type)
+  const resolvedValue = resolveCategoryValue(value)
+  
+  // Check if current value is a custom category (not found in predefined list for this type)
+  // Use resolved value for matching if available, otherwise use raw value
+  const valueToMatch = resolvedValue || value
+  const isCustomCategory = value && !categories.some((cat) => cat.value === valueToMatch)
+  
+  // Create custom category option if needed
+  const customCategory: CategoryDefinition | null = isCustomCategory
+    ? {
+        value: value, // Keep original value, not resolved
+        label: value,
+        icon: CircleDot,
+        type: [type],
+      }
+    : null
 
   const isCompact = variant === "compact"
   const gridCols = isCompact ? "grid-cols-4" : "grid-cols-3 sm:grid-cols-4"
 
+  // Combine custom category (if exists) with predefined categories
+  const allCategories = customCategory ? [customCategory, ...categories] : categories
+
   return (
     <div className={cn("grid gap-2", gridCols)}>
-      {categories.map((category) => {
+      {allCategories.map((category) => {
         const Icon = category.icon
-        const isSelected = value === category.value
+        // Match: use resolved value for predefined categories, exact value for custom
+        const isSelected = customCategory && category.value === value
+          ? true // Custom category selected
+          : (resolvedValue ? resolvedValue === category.value : value === category.value)
 
         return (
           <button

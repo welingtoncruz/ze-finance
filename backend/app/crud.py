@@ -15,6 +15,7 @@ from app.schemas import (
     CategoryMetric,
     DashboardSummary,
     TransactionCreate,
+    TransactionUpdate,
     UserCreate,
 )
 from app.auth_utils import get_password_hash, verify_password
@@ -156,6 +157,80 @@ async def list_user_transactions(
         .limit(limit)
     )
     return list(result.scalars().all())
+
+
+async def get_user_transaction(
+    db: AsyncSession,
+    transaction_id: UUID,
+    user_id: UUID,
+) -> Optional[Transaction]:
+    """
+    Get a transaction by ID if it belongs to the user.
+    
+    Args:
+        db: Database session
+        transaction_id: ID of the transaction
+        user_id: ID of the user (for ownership verification)
+        
+    Returns:
+        Transaction object if found and owned by user, None otherwise
+    """
+    result = await db.execute(
+        select(Transaction).where(
+            (Transaction.id == transaction_id) & (Transaction.user_id == user_id)
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_user_transaction(
+    db: AsyncSession,
+    transaction_id: UUID,
+    user_id: UUID,
+    tx_update: TransactionUpdate,
+) -> Optional[Transaction]:
+    """
+    Update a transaction if it belongs to the user.
+    
+    Args:
+        db: Database session
+        transaction_id: ID of the transaction to update
+        user_id: ID of the user (for ownership verification)
+        tx_update: Transaction update schema (partial fields)
+        
+    Returns:
+        Updated Transaction object if found and updated, None if not found
+        
+    Raises:
+        HTTPException: If validation fails (amount <= 0, etc.)
+    """
+    # Fetch the transaction
+    transaction = await get_user_transaction(db, transaction_id, user_id)
+    if not transaction:
+        return None
+    
+    # Check if at least one field is provided
+    update_data = tx_update.model_dump(exclude_unset=True)
+    if not update_data:
+        # No-op: return current transaction
+        return transaction
+    
+    # Validate amount if provided
+    if "amount" in update_data and update_data["amount"] is not None:
+        if update_data["amount"] <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Amount must be positive",
+            )
+    
+    # Update fields
+    for field, value in update_data.items():
+        if value is not None:
+            setattr(transaction, field, value)
+    
+    await db.commit()
+    await db.refresh(transaction)
+    return transaction
 
 
 async def delete_user_transaction(

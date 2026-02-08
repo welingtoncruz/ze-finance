@@ -11,6 +11,7 @@ from sqlalchemy import (
     Index,
     Numeric,
     String,
+    Text,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -74,3 +75,55 @@ class Transaction(Base):
 
     def __repr__(self) -> str:
         return f"<Transaction(id={self.id}, user_id={self.user_id}, type={self.type}, amount={self.amount})>"
+
+
+class ChatMessage(Base):
+    """
+    Chat message model representing a message in a conversation with Zefa.
+    """
+    __tablename__ = "chat_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    conversation_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    role = Column(String(50), nullable=False)  # system, user, assistant, tool
+    content = Column(Text, nullable=False)
+    content_type = Column(String(50), nullable=False, default="text")  # text, tool_result, system
+    tool_name = Column(String(255), nullable=True)
+    tool_call_id = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Indexes for optimized queries
+    __table_args__ = (
+        Index("idx_chat_messages_user_conversation_created", "user_id", "conversation_id", "created_at"),
+        Index("idx_chat_messages_user_created", "user_id", "created_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ChatMessage(id={self.id}, user_id={self.user_id}, conversation_id={self.conversation_id}, role={self.role})>"
+
+
+class ChatConversationSummary(Base):
+    """
+    Conversation summary model for memory optimization.
+    Stores summarized older messages to reduce token usage.
+    """
+    __tablename__ = "chat_conversation_summaries"
+
+    conversation_id = Column(UUID(as_uuid=True), primary_key=True)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    summary = Column(Text, nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, onupdate=func.now())
+
+    def __repr__(self) -> str:
+        return f"<ChatConversationSummary(conversation_id={self.conversation_id}, user_id={self.user_id})>"

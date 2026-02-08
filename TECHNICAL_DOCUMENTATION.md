@@ -18,14 +18,20 @@ Build an MVP personal finance assistant focused on a **Walking Skeleton**: a com
 - **Transactions**
   - List transactions (owned by logged-in user)
   - Create transaction (income/expense) with icon-grid category selection
-  - Edit transaction (UI-only, local persistence; backend endpoint pending)
+  - Edit transaction (PATCH backend + UI)
   - Delete transaction (owned by logged-in user)
 - **Dashboard**
   - Summary totals (balance, income, expense) and breakdown by category
-- **Chat (Preview)**
+- **Chat (AI Agent)**
   - Interactive chat interface with Zefa assistant (masculine)
-  - Simulated responses for financial queries
-  - Coming soon messaging integrated into chat flow
+  - Backend-integrated real-time conversations via POST `/chat/messages` (returns message and UI metadata envelope)
+  - Natural language queries for financial data
+  - Tool-based function calling (get_balance, list_transactions, create_transaction, analyze_spending)
+  - Optimistic UI with localStorage persistence (survives browser close/reopen)
+  - Markdown GFM rendering for assistant messages (bold, lists, links, code blocks)
+  - Theme-aligned bubble colors (primary for user, muted for assistant)
+  - Error handling with retry functionality
+  - Transaction confirmation cards (powered by chat UI events metadata in response envelope)
 
 #### Non-goals (MVP)
 - Complex budgeting rules, recurring transactions, multi-currency, bank integrations, or advanced analytics.
@@ -88,6 +94,8 @@ Authoritative reference: `ai-specs/specs/data-model.md`.
 ```mermaid
 erDiagram
   User ||--o{ Transaction : "records"
+  User ||--o{ ChatMessage : "has"
+  User ||--o{ ChatConversationSummary : "has"
 
   User {
     uuid id PK
@@ -107,6 +115,25 @@ erDiagram
     string description
     timestamp occurred_at
     timestamp created_at
+  }
+
+  ChatMessage {
+    uuid id PK
+    uuid user_id FK
+    uuid conversation_id
+    string role
+    text content
+    string content_type
+    string tool_name
+    string tool_call_id
+    timestamp created_at
+  }
+
+  ChatConversationSummary {
+    uuid conversation_id PK
+    uuid user_id FK
+    text summary
+    timestamp updated_at
   }
 ```
 
@@ -130,12 +157,13 @@ Authoritative contract: `ai-specs/specs/api-spec.yml`.
 - **Transactions** (protected, require JWT bearer token)
   - `GET /transactions?limit=50` → list user transactions
   - `POST /transactions` → create user transaction
-  - `PUT/PATCH /transactions/{transaction_id}` → update user transaction (pending implementation)
+  - `PATCH /transactions/{transaction_id}` → update user transaction
   - `DELETE /transactions/{transaction_id}` → delete user transaction
 - **Dashboard** (protected)
   - `GET /dashboard/summary` → aggregated totals and category breakdown
-
-**Note:** Transaction editing is currently implemented as local-only in the frontend (with localStorage persistence) until the backend update endpoint is available.
+- **Chat** (protected)
+  - `POST /chat/messages` → send message and receive Zefa response with UI metadata
+  - `POST /chat/api-key` → set ephemeral provider API key (in-memory, expires in 60 minutes)
 
 #### Security requirements (MVP)
 - Passwords must be stored hashed (never plaintext).
@@ -162,6 +190,40 @@ Minimum navigable flow:
 - No `any` types in TypeScript.
 - Use a centralized API client (Axios instance) and handle 401 redirect to login.
 
+#### Frontend Architecture (Chat Integration)
+**Chat Components:**
+- `ZefaChatScreen.tsx`: Main chat interface component
+- `ChatBubble.tsx`: Individual message bubble with Markdown GFM rendering and status indicators
+- `ChatSearchBar.tsx` / `ChatSearchResults.tsx`: In-chat message search
+- `ChatMessageAnchor.tsx`: Anchor links for in-message navigation (e.g. to transactions)
+- `TypingIndicator.tsx`: "Zefa está digitando..." animation
+- `TransactionConfirmationCard.tsx`: Success card for transaction confirmations
+
+**State Management:**
+- `useChat` hook: Manages messages, conversation ID, typing state, and localStorage persistence
+- Hydration gating: Prevents overwriting persisted state on initial mount
+- Optimistic UI: User messages appear immediately with "sending" status
+- Error handling: Failed messages show retry buttons with user-friendly error messages
+
+**Message Rendering:**
+- `react-markdown` + `remark-gfm` for Markdown GFM support
+- Renders inline bold (`**text**`), lists, links, code blocks, and line breaks
+- Custom component mapping with Tailwind classes for consistent styling
+- No raw HTML rendering (security-first approach)
+
+**API Integration:**
+- `lib/chat/service.ts`: Normalization layer for backend chat API
+- `lib/hooks/useChat.ts`: Chat state, conversation ID, typing, and persistence
+- `lib/markdown/remarkHighlightSearch.ts`: Markdown plugin for search highlighting
+- Handles timeout (30s), network errors, and 401 redirects
+- Ready for future backend format changes (normalized response structure)
+
+**Persistence:**
+- localStorage key: `zefa_chat_v1:default` (prepared for user-scoped keys in future)
+- Stores conversation ID and messages (with ISO timestamp strings)
+- Long-term persistence: Survives browser close/reopen
+- Rehydrates on component mount with hydration gating to prevent data loss
+
 ---
 
 ### 6) Test suite
@@ -181,7 +243,9 @@ Minimum navigable flow:
   - Dashboard summary (authorized)
 
 #### Frontend tests (recommended minimum)
-- Lint + typecheck + build are acceptable for MVP.
+- **Unit/Integration Tests**: Component and utility function tests (Vitest)
+- **E2E Tests**: Full user flow tests (Playwright)
+- **Test Results**: ✅ 60 frontend tests passing
 
 #### At least one E2E test (main flow)
 Minimum E2E scenario (tooling example: Playwright/Cypress):
@@ -240,7 +304,7 @@ Recommended CI steps:
 - Recommended approach:
   - Deploy frontend to a static hosting platform (e.g., Vercel)
   - Deploy backend + DB to a managed platform (e.g., Render/Fly/Railway)
-  - Configure CORS (`ALLOWED_ORIGINS`) and API base URL (`NEXT_PUBLIC_API_URL`)
+  - Configure CORS (`ALLOWED_ORIGINS`) and API base URL (`NEXT_PUBLIC_API_BASE_URL`)
 
 ---
 

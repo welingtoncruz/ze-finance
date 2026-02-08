@@ -16,7 +16,7 @@ export function BottomNavigation({ currentRoute }: BottomNavigationProps) {
 
   const navItems = [
     { route: "/", icon: Home, label: "Início" },
-    { route: "/insights", icon: BarChart3, label: "Insights" },
+    { route: "/insights", icon: BarChart3, label: "Análises" },
     { route: "/chat", icon: Sparkles, label: "Zefa", isFab: true },
     { route: "/transactions", icon: Receipt, label: "Transações" },
   ]

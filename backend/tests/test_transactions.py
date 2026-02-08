@@ -218,3 +218,167 @@ async def test_delete_transaction_other_user(async_client: AsyncClient) -> None:
     # Assert
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_update_transaction_success(async_client: AsyncClient, test_user: dict) -> None:
+    """Test updating a transaction returns 200 with updated data."""
+    # Arrange - Create a transaction
+    tx_data = {
+        "amount": 100.0,
+        "type": "EXPENSE",
+        "category": "Food",
+        "description": "Lunch",
+    }
+    create_response = await async_client.post(
+        "/transactions",
+        json=tx_data,
+        headers=test_user["headers"],
+    )
+    transaction_id = create_response.json()["id"]
+    
+    # Act - Update the transaction
+    update_data = {
+        "description": "Dinner",
+        "category": "Restaurant",
+    }
+    response = await async_client.patch(
+        f"/transactions/{transaction_id}",
+        json=update_data,
+        headers=test_user["headers"],
+    )
+    
+    # Assert
+    assert response.status_code == 200
+    data = response.json()
+    assert data["description"] == "Dinner"
+    assert data["category"] == "Restaurant"
+    assert float(data["amount"]) == 100.0  # Unchanged
+    assert data["type"] == "EXPENSE"  # Unchanged
+
+
+@pytest.mark.asyncio
+async def test_update_transaction_partial(async_client: AsyncClient, test_user: dict) -> None:
+    """Test partial update only changes provided fields."""
+    # Arrange - Create a transaction
+    tx_data = {
+        "amount": 50.0,
+        "type": "EXPENSE",
+        "category": "Food",
+        "description": "Original",
+    }
+    create_response = await async_client.post(
+        "/transactions",
+        json=tx_data,
+        headers=test_user["headers"],
+    )
+    transaction_id = create_response.json()["id"]
+    
+    # Act - Update only description
+    update_data = {"description": "Updated"}
+    response = await async_client.patch(
+        f"/transactions/{transaction_id}",
+        json=update_data,
+        headers=test_user["headers"],
+    )
+    
+    # Assert
+    assert response.status_code == 200
+    data = response.json()
+    assert data["description"] == "Updated"
+    assert data["category"] == "Food"  # Unchanged
+    assert float(data["amount"]) == 50.0  # Unchanged
+
+
+@pytest.mark.asyncio
+async def test_update_transaction_unauthorized(async_client: AsyncClient) -> None:
+    """Test updating a transaction without token returns 401."""
+    # Arrange
+    from uuid import uuid4
+    fake_id = uuid4()
+    update_data = {"description": "Test"}
+    
+    # Act
+    response = await async_client.patch(
+        f"/transactions/{fake_id}",
+        json=update_data,
+    )
+    
+    # Assert
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_update_transaction_not_found(async_client: AsyncClient, test_user: dict) -> None:
+    """Test updating non-existent transaction returns 404."""
+    # Arrange
+    from uuid import uuid4
+    fake_id = uuid4()
+    update_data = {"description": "Test"}
+    
+    # Act
+    response = await async_client.patch(
+        f"/transactions/{fake_id}",
+        json=update_data,
+        headers=test_user["headers"],
+    )
+    
+    # Assert
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_update_transaction_other_user(async_client: AsyncClient) -> None:
+    """Test updating another user's transaction returns 404."""
+    # Arrange - Create two users
+    user1_data = {"email": "owner@example.com", "password": "password123"}
+    user2_data = {"email": "other@example.com", "password": "password123"}
+    
+    resp1 = await async_client.post("/auth/register", json=user1_data)
+    resp2 = await async_client.post("/auth/register", json=user2_data)
+    token1 = resp1.json()["access_token"]
+    token2 = resp2.json()["access_token"]
+    headers1 = {"Authorization": f"Bearer {token1}"}
+    headers2 = {"Authorization": f"Bearer {token2}"}
+    
+    # User1 creates a transaction
+    tx_data = {"amount": 100.0, "type": "EXPENSE", "category": "Food"}
+    create_resp = await async_client.post("/transactions", json=tx_data, headers=headers1)
+    transaction_id = create_resp.json()["id"]
+    
+    # Act - User2 tries to update user1's transaction
+    update_data = {"description": "Hacked"}
+    response = await async_client.patch(
+        f"/transactions/{transaction_id}",
+        json=update_data,
+        headers=headers2,
+    )
+    
+    # Assert
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_update_transaction_validation(async_client: AsyncClient, test_user: dict) -> None:
+    """Test updating with invalid amount returns 422."""
+    # Arrange - Create a transaction
+    tx_data = {"amount": 50.0, "type": "EXPENSE", "category": "Food"}
+    create_response = await async_client.post(
+        "/transactions",
+        json=tx_data,
+        headers=test_user["headers"],
+    )
+    transaction_id = create_response.json()["id"]
+    
+    # Act - Try to update with negative amount
+    update_data = {"amount": -1.0}
+    response = await async_client.patch(
+        f"/transactions/{transaction_id}",
+        json=update_data,
+        headers=test_user["headers"],
+    )
+    
+    # Assert
+    assert response.status_code == 422  # Validation error

@@ -1,111 +1,109 @@
-Data Model Documentation - Zefa Finance
-This document describes the data model for the Zefa Finance application (MVP Phase), including entity descriptions, field definitions, relationships, and an entity-relationship diagram (ERD).
+# Data Model (Zefa Finance — MVP)
 
-Model Descriptions
-1. User
-Represents a registered user in the system who has access to their own financial dashboard.
+This document describes the database data model for the Zefa Finance MVP.
 
-Fields:
+## Entity-Relationship Diagram (ERD)
 
-id: Unique universal identifier (UUID) for the user (Primary Key).
+```mermaid
+erDiagram
+  User ||--o{ Transaction : "records"
+  User ||--o{ ChatMessage : "has"
+  User ||--o{ ChatConversationSummary : "has"
 
-email: Unique email address for login authentication (max 255 characters).
+  User {
+    uuid id PK
+    string email UK
+    string hashed_password
+    string full_name
+    timestamp created_at
+    timestamp last_login_at
+  }
 
-hashed_password: Securely hashed password string (BCrypt). Plain text passwords are never stored.
+  Transaction {
+    uuid id PK
+    uuid user_id FK
+    decimal amount
+    enum type "INCOME, EXPENSE"
+    string category
+    string description
+    timestamp occurred_at
+    timestamp created_at
+  }
 
-full_name: User's full name (optional, max 100 characters).
+  ChatMessage {
+    uuid id PK
+    uuid user_id FK
+    uuid conversation_id
+    string role
+    text content
+    string content_type
+    string tool_name
+    string tool_call_id
+    timestamp created_at
+  }
 
-created_at: Timestamp of account creation.
+  ChatConversationSummary {
+    uuid conversation_id PK
+    uuid user_id FK
+    text summary
+    timestamp updated_at
+  }
+```
 
-last_login_at: Timestamp of the last successful authentication.
+## Entities
 
-Validation Rules:
+### User
 
-Email is required, must be unique across the system, and follow valid email format.
+Represents a registered user in the system.
 
-Password (input) must be at least 8 characters long before hashing.
+- **id** (UUID, PK): generated UUID (v4).
+- **email** (string, unique): login identifier.
+- **hashed_password** (string): password hash (bcrypt).
+- **full_name** (string, nullable): optional display name.
+- **created_at** (timestamp): creation timestamp.
+- **last_login_at** (timestamp, nullable): last successful login time.
 
-The ID is auto-generated (UUID v4) upon creation.
+### Transaction
 
-Relationships:
-
-transactions: One-to-many relationship with the Transaction model (A user has many transactions).
-
-2. Transaction
 Represents a financial movement (income or expense) recorded by a user.
 
-Fields:
+- **id** (UUID, PK)
+- **user_id** (UUID, FK -> User.id): ownership / multi-tenancy boundary.
+- **amount** (numeric/decimal): must be positive; the sign is implied by `type`.
+- **type** (enum): `INCOME` or `EXPENSE`.
+- **category** (string): free-form in MVP (no category table yet).
+- **description** (string, nullable)
+- **occurred_at** (timestamp): business date/time.
+- **created_at** (timestamp): record creation timestamp.
 
-id: Unique identifier for the transaction (Primary Key).
+### ChatMessage
 
-user_id: Reference to the user who owns this transaction (Foreign Key).
+Represents a message exchanged in a chat conversation with Zefa (user/assistant/tool).
 
-amount: Monetary value of the transaction. Stored with decimal precision (Numeric/Decimal) to avoid floating-point errors.
+- **id** (UUID, PK)
+- **user_id** (UUID, FK -> User.id): ownership / isolation.
+- **conversation_id** (UUID): conversation grouping key.
+- **role** (string): `system`, `user`, `assistant`, `tool`.
+- **content** (text)
+- **content_type** (string): `text` (MVP) and internal tool/system types.
+- **tool_name** (string, nullable): tool identifier (when role is `tool`).
+- **tool_call_id** (string, nullable): correlation id for tool call results.
+- **created_at** (timestamp)
 
-type: The type of movement. Enum: INCOME or EXPENSE.
+### ChatConversationSummary
 
-category: Grouping category (e.g., "Food", "Transport"). Stored as a string for MVP flexibility.
+Stores a rolling summary of older messages for a conversation (memory optimization).
 
-description: Detailed description or notes about the transaction (optional, max 255 characters).
+- **conversation_id** (UUID, PK)
+- **user_id** (UUID, FK -> User.id)
+- **summary** (text)
+- **updated_at** (timestamp)
 
-occurred_at: The actual date/time when the transaction took place.
+## Constraints and notes
 
-created_at: Timestamp when the record was inserted into the system (Audit).
+- **Email uniqueness** is enforced at the database level.
+- **Data isolation** is enforced by always scoping queries by authenticated `user_id`.
+- **Cascade delete**: deleting a user cascades to transactions and chat records.
+- **Indexes**: the implementation includes indexes to speed up common list and summary queries
+  (e.g., `(user_id, occurred_at)` for transactions and `(user_id, conversation_id, created_at)` for chat messages).
 
-Validation Rules:
-
-amount must always be a positive value (the sign is determined by the type field).
-
-category is required to ensure consistency in dashboard reports.
-
-If occurred_at is not provided, it defaults to the current server time.
-
-Deletion of a User must trigger a cascade deletion of their Transaction records.
-
-Relationships:
-
-user: Many-to-one relationship with the User model.
-
-Entity-Relationship Diagram (ERD)
-The diagram below illustrates the entities and their direct relationships within the PostgreSQL database.
-
-Snippet de código
-erDiagram
-    User ||--o{ Transaction : "records"
-
-    User {
-        uuid id PK
-        string email UK
-        string hashed_password
-        string full_name
-        timestamp created_at
-        timestamp last_login_at
-    }
-
-    Transaction {
-        uuid id PK
-        uuid user_id FK
-        decimal amount
-        enum type "INCOME, EXPENSE"
-        string category
-        string description
-        timestamp occurred_at
-        timestamp created_at
-    }
-Key Design Principles
-Referential Integrity: Foreign Key constraints (user_id) strictly enforce that no transaction can exist without an associated user (Orphan prevention).
-
-Monetary Precision: The amount field uses exact numeric types (Decimal) instead of approximate floating-point types to guarantee financial accuracy.
-
-Data Isolation (Multi-tenancy): The model is designed for Logical Multi-tenancy, where every query must filter by the authenticated user_id.
-
-Auditability: The distinction between occurred_at (business date) and created_at (system date) allows for accurate historical tracking.
-
-Simplicity (MVP Focus): Categories are currently implemented as strings rather than a separate normalized table. This reduces complexity for the initial release while allowing for future refactoring (e.g., User-defined categories).
-
-Notes
-All id fields use UUID v4 to ensure global uniqueness and prevent resource enumeration attacks.
-
-The type field is implemented as a PostgreSQL ENUM or a String with strict application-level validation.
-
-Indexes should be created on transactions(user_id, occurred_at) to optimize dashboard query performance.

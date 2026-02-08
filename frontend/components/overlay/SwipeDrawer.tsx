@@ -71,7 +71,7 @@ export function SwipeDrawer({ isOpen, onClose, children, title }: SwipeDrawerPro
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className={`swipe-drawer open`}
+        className={`swipe-drawer open flex flex-col`}
         style={{ transform: `translateX(${dragOffset}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -80,7 +80,7 @@ export function SwipeDrawer({ isOpen, onClose, children, title }: SwipeDrawerPro
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between border-b border-border p-4">
+          <div className="flex items-center justify-between border-b border-border p-4 shrink-0">
             <h2 className="text-lg font-semibold">{title}</h2>
             <button
               onClick={onClose}
@@ -90,8 +90,8 @@ export function SwipeDrawer({ isOpen, onClose, children, title }: SwipeDrawerPro
             </button>
           </div>
         )}
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
+        {/* Content - scrollable area */}
+        <div className="flex-1 overflow-y-auto p-4 min-h-0 h-full">{children}</div>
       </div>
     </>
   )

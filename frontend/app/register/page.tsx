@@ -27,7 +27,7 @@ export default function RegisterPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Registration failed. Please try again."
+          : "Falha no cadastro. Tente novamente."
       )
     }
   }
@@ -67,7 +67,7 @@ export default function RegisterPage() {
           <h1 className="mt-8 text-4xl font-bold gradient-text">Ze Finance</h1>
           <div className="mt-2 flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-accent" />
-            <p className="text-base font-medium text-muted-foreground">Premium Finance Manager</p>
+            <p className="text-base font-medium text-muted-foreground">Gestor de finanças premium</p>
           </div>
         </div>
 
@@ -75,12 +75,12 @@ export default function RegisterPage() {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
+            Já tem uma conta?{" "}
             <button
               onClick={() => router.push("/login")}
               className="font-semibold text-primary hover:underline"
             >
-              Sign in
+              Entrar
             </button>
           </p>
         </div>

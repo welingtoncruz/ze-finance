@@ -74,7 +74,9 @@ backend/
 │   ├── crud.py            # Data Access Logic - Simplified "Repository Pattern"
 │   ├── database.py        # DB Connection Configuration (SessionLocal)
 │   ├── auth_utils.py      # JWT Logic and Password Hashing
-│   └── routers/           # (Optional) If main.py grows, split routes here
+│   ├── ai/                # AI gateway, tools, prompt (Zefa chat agent)
+│   ├── chat/              # Chat CRUD, routes, schemas (message persistence)
+│   └── routers/           # Auth, dashboard, transactions
 ├── tests/
 │   ├── conftest.py        # Pytest Fixtures (In-memory DB, Clients)
 │   ├── test_auth.py

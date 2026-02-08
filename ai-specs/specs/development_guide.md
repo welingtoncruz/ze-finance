@@ -1,167 +1,122 @@
-# Development Guide
+# Development Guide (Zefa Finance)
 
-This guide provides step-by-step instructions for setting up the development environment, running the project locally, and executing tests for the **Zefa Finance** system.
+This guide explains how to set up the development environment, run the stack locally, and execute tests for the **Zefa Finance** MVP.
 
-## Setup Instructions
+## Prerequisites
 
-### Prerequisites
+- **Python** 3.11+
+- **Node.js** 18+
+- **Docker Desktop** + **Docker Compose v2**
 
-Ensure you have the following installed:
-- **Python** (v3.11 or higher)
-- **Node.js** (v18 or higher) - Required for Next.js 14
-- **Docker** and **Docker Compose**
-- **Git**
+## Quick start (recommended)
 
-### 1. Clone the Repository
+### 1) Start the database (PostgreSQL via Docker)
+
+From the repository root:
 
 ```bash
-git clone git@github.com:seu-usuario/zefa-finance.git
-cd zefa-finance
-2. Environment Configuration
-Create environment files for both backend and frontend.
+docker compose up -d db
+```
 
-Backend Environment (backend/.env):
+Defaults:
 
-Snippet de código
-# Database Configuration
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres_password
-POSTGRES_DB=zefa_db
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
+- **Host**: `localhost`
+- **Port**: `5433` (to avoid conflicts with local PostgreSQL)
+- **Database**: `zefa_db`
+- **User**: `postgres`
+- **Password**: `postgres_password`
 
-# Application Configuration
-SECRET_KEY="sua_chave_secreta_super_segura_para_dev"
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-ALLOWED_ORIGINS=["http://localhost:3000"]
+Optional database UI:
 
-# SQLAlchemy Connection String
-DATABASE_URL="postgresql+asyncpg://postgres:postgres_password@localhost:5432/zefa_db"
-Frontend Environment (frontend/.env.local):
+```bash
+docker compose --profile tools up -d adminer
+```
 
-Snippet de código
-NEXT_PUBLIC_API_URL=http://localhost:8000
-3. Database Setup (via Docker)
-We use Docker to run the PostgreSQL database ensuring a consistent environment.
+Adminer is available at `http://localhost:8080`.
 
-Bash
-# Start the database container in detached mode
-docker-compose up -d db
+### 2) Backend setup
 
-# Verify if the database is running
-docker-compose ps
-The database will be available at:
-
-Host: localhost
-
-Port: 5432
-
-Database: zefa_db
-
-Username: postgres
-
-Password: postgres_password
-
-4. Backend Setup (Local)
-Running the backend locally allows for hot-reloading during development.
-
-Bash
-# Navigate to backend directory
+```bash
 cd backend
-
-# Create a virtual environment
-python -m venv venv
-
-# Activate the virtual environment
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-
-# Install dependencies
+cp .env.example .env
 pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --env-file .env
+```
 
-# Run the application (Uvicorn)
-# The --reload flag enables hot-reloading
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-The backend API will be available at http://localhost:8000. Link to Interactive Docs (Swagger): http://localhost:8000/docs
+Endpoints:
 
-5. Frontend Setup (Local)
-Bash
-# Navigate to frontend directory (from project root)
+- API: `http://localhost:8000`
+- Docs (Swagger): `http://localhost:8000/docs`
+- Health: `http://localhost:8000/health`
+
+### 3) Frontend setup
+
+```bash
 cd frontend
-
-# Install dependencies
+cp .env.example .env.local
 npm install
-
-# Start the development server
 npm run dev
-The frontend application will be available at http://localhost:3000.
+```
 
-6. Running with Docker Compose (Full Stack)
-If you prefer to run the entire stack (Database + Backend + Frontend) inside Docker containers (e.g., to validate the "Walking Skeleton"):
+Frontend: `http://localhost:3000`
 
-Bash
-# Build and start all services
-docker-compose up --build
+## Environment variables
 
-# To stop services
-docker-compose down
-🧪 Testing
-Backend Testing (Pytest)
-We use Pytest for unit and integration testing.
+### Backend (`backend/.env`)
 
-Bash
-# From the backend directory (with venv activated)
+See `backend/.env.example` for all options. The most important:
+
+- `DATABASE_URL`: must use `postgresql+asyncpg://...` (matches Docker Compose defaults)
+- `SECRET_KEY`: JWT signing secret (change in production)
+- `ACCESS_TOKEN_EXPIRE_MINUTES`: JWT expiration time
+- `ALLOWED_ORIGINS`: JSON array string (e.g., `["http://localhost:3000"]`)
+
+### AI chat agent configuration (backend)
+
+You can configure API keys via environment variables:
+
+- `OPENAI_API_KEY` (OpenAI)
+- `ANTHROPIC_API_KEY` (Anthropic)
+- `GEMINI_API_KEY` (Gemini)
+
+If no key is set, you can temporarily set one via the API (stored in memory and expires after 60 minutes):
+
+- `POST /chat/api-key`
+
+### Frontend (`frontend/.env.local`)
+
+- `NEXT_PUBLIC_API_BASE_URL`: backend base URL (default: `http://localhost:8000`)
+
+## Tests
+
+### Backend tests (Pytest)
+
+Backend tests use an in-memory SQLite database and do not require Docker:
+
+```bash
 cd backend
+python -m pytest -v
+```
 
-# Run all tests
-pytest
+### Frontend tests
 
-# Run tests with output logs
-pytest -s
-
-# Run a specific test file
-pytest tests/test_transactions.py
-Frontend Testing (Linting & Build)
-For the MVP, we focus on static analysis and build validation.
-
-Bash
-# From the frontend directory
+```bash
 cd frontend
+npm test
+```
 
-# Run linting
-npm run lint
+## Troubleshooting
 
-# Check if the project builds correctly
-npm run build
-Common Tasks
-Database Migrations
-Currently, the project uses Base.metadata.create_all in main.py for auto-migration during development. If you reset the database:
+### Database connection issues
 
-Stop the containers: docker-compose down
+- Check containers: `docker compose ps`
+- View logs: `docker compose logs -f db`
+- Ensure `DATABASE_URL` points to port `5433` when using Docker Compose defaults.
 
-Remove the volume (optional, wipes data): docker volume prune
+### Reset the database (dev only)
 
-Restart: docker-compose up -d db
+```bash
+docker compose down -v
+docker compose up -d db
+```
 
-Adding a New Python Dependency
-Install the package: pip install package_name
-
-Update requirements: pip freeze > requirements.txt
-
-Project Structure
-Plaintext
-zefa-finance/
-├── backend/                # FastAPI Application
-│   ├── app/
-│   │   ├── routers/        # API Endpoints
-│   │   ├── models.py       # SQLAlchemy Models
-│   │   ├── schemas.py      # Pydantic Schemas
-│   │   └── crud.py         # Business Logic
-│   └── tests/              # Pytest Suite
-├── frontend/               # Next.js Application
-│   ├── app/                # App Router Pages
-│   ├── components/         # ShadcnUI Components
-│   └── lib/                # Utilities (Axios, Utils)
-└── docker-compose.yml      # Infrastructure Orchestration
