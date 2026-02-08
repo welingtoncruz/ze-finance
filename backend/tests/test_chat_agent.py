@@ -9,6 +9,8 @@ import respx
 from httpx import AsyncClient, Response
 
 # Note: We use the /chat/api-key endpoint to set API keys in tests
+# OpenAI client may send method as bytes (b"POST"); respx.post() matches str "POST" only.
+# Use respx.route(method__in=["POST", b"POST"], url=...) so mocks match in all environments.
 
 
 @pytest.mark.asyncio
@@ -54,7 +56,7 @@ async def test_chat_message_with_balance_query(async_client: AsyncClient, test_u
     # Mock OpenAI API call
     with respx.mock:
         # Mock the OpenAI API response
-        respx.post("https://api.openai.com/v1/chat/completions").mock(
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(
             return_value=Response(
                 200,
                 json={
@@ -87,7 +89,7 @@ async def test_chat_message_with_balance_query(async_client: AsyncClient, test_u
         )
         
         # Mock second call (after tool execution)
-        respx.post("https://api.openai.com/v1/chat/completions").mock(
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(
             return_value=Response(
                 200,
                 json={
@@ -172,7 +174,7 @@ async def test_chat_message_isolation(async_client: AsyncClient) -> None:
     
     # Mock OpenAI API for user A
     with respx.mock:
-        respx.post("https://api.openai.com/v1/chat/completions").mock(
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(
             return_value=Response(
                 200,
                 json={
@@ -297,7 +299,7 @@ async def test_chat_message_create_transaction(async_client: AsyncClient, test_u
         ]
         
         # Configure mock to return responses in sequence
-        respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=responses)
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(side_effect=responses)
         
         payload = {
             "text": "Registra um Uber de 27,90",
@@ -346,7 +348,7 @@ async def test_chat_message_provider_error(async_client: AsyncClient, test_user:
     
     # Mock OpenAI API call that fails
     with respx.mock:
-        respx.post("https://api.openai.com/v1/chat/completions").mock(
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(
             return_value=Response(
                 500,
                 json={"error": "Internal server error"},
@@ -391,7 +393,7 @@ async def test_set_ephemeral_api_key(async_client: AsyncClient, test_user: dict)
     
     # Verify key is set (by trying to use it)
     with respx.mock:
-        respx.post("https://api.openai.com/v1/chat/completions").mock(
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(
             return_value=Response(
                 200,
                 json={
@@ -443,7 +445,7 @@ async def test_context_limit_wired(async_client: AsyncClient, test_user: dict, m
     
     # Mock OpenAI API call
     with respx.mock:
-        respx.post("https://api.openai.com/v1/chat/completions").mock(
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(
             return_value=Response(
                 200,
                 json={
@@ -521,7 +523,7 @@ async def test_output_token_caps(async_client: AsyncClient, test_user: dict, mon
         )
     
     with respx.mock:
-        respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=capture_request)
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(side_effect=capture_request)
         
         payload = {
             "text": "Olá",
@@ -583,7 +585,7 @@ async def test_tools_gating_heuristic(async_client: AsyncClient, test_user: dict
         )
     
     with respx.mock:
-        respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=capture_request)
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(side_effect=capture_request)
         
         # Test 1: Non-finance message should not include tools
         payload = {
@@ -666,7 +668,7 @@ async def test_tools_mode_always(async_client: AsyncClient, test_user: dict, mon
         )
     
     with respx.mock:
-        respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=capture_request)
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(side_effect=capture_request)
         
         # Non-finance message should still include tools
         payload = {
@@ -728,7 +730,7 @@ async def test_tools_mode_never(async_client: AsyncClient, test_user: dict, monk
         )
     
     with respx.mock:
-        respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=capture_request)
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(side_effect=capture_request)
         
         # Finance message should not include tools
         payload = {
@@ -827,7 +829,7 @@ async def test_chat_message_update_transaction(async_client: AsyncClient, test_u
             ),
         ]
         
-        respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=responses)
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(side_effect=responses)
         
         payload = {
             "text": f"Atualiza a transação {transaction_id} com descrição 'Updated via chat'",
@@ -944,7 +946,7 @@ async def test_chat_message_delete_transaction(async_client: AsyncClient, test_u
             ),
         ]
         
-        respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=responses)
+        respx.route(method__in=["POST", b"POST"], url="https://api.openai.com/v1/chat/completions").mock(side_effect=responses)
         
         payload = {
             "text": f"Remove a transação {transaction_id}",
