@@ -10,7 +10,11 @@ import { EditTransactionDrawer } from "@/components/transactions/EditTransaction
 import { useAuth } from "@/context/AuthContext"
 import api from "@/lib/api"
 import type { ApiTransactionResponse } from "@/lib/types/api"
-import { mapApiTransactionToUi, mapUiTransactionToApiCreate } from "@/lib/types/api"
+import {
+  mapApiTransactionToUi,
+  mapUiTransactionToApiCreate,
+  mapUiTransactionToApiUpdate,
+} from "@/lib/types/api"
 import type { Transaction, UserProfile } from "@/lib/types"
 import { toast } from "sonner"
 
@@ -50,7 +54,7 @@ export default function TransactionsPage() {
       setTransactions(mappedTransactions)
     } catch (error) {
       console.error("Failed to load transactions:", error)
-      toast.error("Failed to load transactions")
+      toast.error("Falha ao carregar transações")
     } finally {
       setIsLoading(false)
     }
@@ -63,10 +67,10 @@ export default function TransactionsPage() {
       const newTransaction = mapApiTransactionToUi(response.data)
       setTransactions((prev) => [newTransaction, ...prev])
       setIsDrawerOpen(false)
-      toast.success("Transaction added successfully")
+      toast.success("Transação adicionada com sucesso")
     } catch (error) {
       console.error("Failed to add transaction:", error)
-      toast.error("Failed to add transaction")
+      toast.error("Falha ao adicionar transação")
       throw error
     }
   }
@@ -75,10 +79,10 @@ export default function TransactionsPage() {
     try {
       await api.delete(`/transactions/${id}`)
       setTransactions((prev) => prev.filter((t) => t.id !== id))
-      toast.success("Transaction deleted")
+      toast.success("Transação excluída")
     } catch (error) {
       console.error("Failed to delete transaction:", error)
-      toast.error("Failed to delete transaction")
+      toast.error("Falha ao excluir transação")
     }
   }
 
@@ -89,39 +93,122 @@ export default function TransactionsPage() {
 
   const handleSaveEdit = async (updatedTransaction: Transaction) => {
     try {
-      // Local-only edit (backend update endpoint not available yet)
+      // Find original transaction for comparison
+      const originalTransaction = transactions.find((t) => t.id === updatedTransaction.id)
+      
+      // Update UI immediately (optimistic update)
       setTransactions((prev) =>
         prev.map((t) => (t.id === updatedTransaction.id ? updatedTransaction : t))
       )
       
-      // Persist to localStorage to avoid losing edits on refresh
-      if (typeof window !== "undefined") {
-        const localEdits = JSON.parse(
-          localStorage.getItem("zefa_local_edits") || "{}"
+      // Prepare update payload
+      const updatePayload = mapUiTransactionToApiUpdate(updatedTransaction, originalTransaction)
+      
+      // Attempt backend sync
+      try {
+        const response = await api.patch<ApiTransactionResponse>(
+          `/transactions/${updatedTransaction.id}`,
+          updatePayload
         )
-        localEdits[updatedTransaction.id] = updatedTransaction
-        localStorage.setItem("zefa_local_edits", JSON.stringify(localEdits))
+        const syncedTransaction = mapApiTransactionToUi(response.data)
+        
+        // Update with server response
+        setTransactions((prev) =>
+          prev.map((t) => (t.id === syncedTransaction.id ? syncedTransaction : t))
+        )
+        
+        // Clear local pending edit if exists
+        if (typeof window !== "undefined") {
+          const localEdits = JSON.parse(
+            localStorage.getItem("zefa_local_edits_v2") || "{}"
+          )
+          delete localEdits[updatedTransaction.id]
+          localStorage.setItem("zefa_local_edits_v2", JSON.stringify(localEdits))
+        }
+        
+        toast.success("Transação atualizada com sucesso")
+        setIsEditDrawerOpen(false)
+        setSelectedTransaction(null)
+      } catch (syncError: any) {
+        // Sync failed - persist locally as pending
+        if (typeof window !== "undefined") {
+          const localEdits = JSON.parse(
+            localStorage.getItem("zefa_local_edits_v2") || "{}"
+          )
+          localEdits[updatedTransaction.id] = {
+            transaction: updatedTransaction,
+            updatedAt: new Date().toISOString(),
+            syncStatus: syncError.response?.status === 404 ? "failed" : "pending",
+          }
+          localStorage.setItem("zefa_local_edits_v2", JSON.stringify(localEdits))
+        }
+        
+        // Show appropriate message
+        if (syncError.response?.status === 404) {
+          toast.error("Transação não encontrada. A edição foi removida.")
+          // Remove from UI if transaction was deleted
+          setTransactions((prev) => prev.filter((t) => t.id !== updatedTransaction.id))
+        } else {
+          toast.warning("Edição salva localmente. Sincronização pendente.")
+        }
+        
+        setIsEditDrawerOpen(false)
+        setSelectedTransaction(null)
       }
-
-      toast.success("Edição salva localmente. Sincronização em breve.")
-      setIsEditDrawerOpen(false)
-      setSelectedTransaction(null)
     } catch (error) {
       console.error("Failed to save edit:", error)
       toast.error("Falha ao salvar edição")
     }
   }
 
-  // Load local edits on mount
+  // Load and sync local pending edits on mount
   useEffect(() => {
     if (typeof window !== "undefined" && transactions.length > 0) {
       const localEdits = JSON.parse(
-        localStorage.getItem("zefa_local_edits") || "{}"
+        localStorage.getItem("zefa_local_edits_v2") || "{}"
       )
+      
       if (Object.keys(localEdits).length > 0) {
+        // Apply local edits to UI
         setTransactions((prev) =>
-          prev.map((t) => (localEdits[t.id] ? { ...t, ...localEdits[t.id] } : t))
+          prev.map((t) => {
+            const edit = localEdits[t.id]
+            return edit ? { ...t, ...edit.transaction } : t
+          })
         )
+        
+        // Attempt to sync pending edits in background
+        Object.entries(localEdits).forEach(async ([txId, edit]: [string, any]) => {
+          if (edit.syncStatus === "pending") {
+            try {
+              const updatePayload = mapUiTransactionToApiUpdate(edit.transaction)
+              const response = await api.patch<ApiTransactionResponse>(
+                `/transactions/${txId}`,
+                updatePayload
+              )
+              const syncedTransaction = mapApiTransactionToUi(response.data)
+              
+              // Update UI with synced data
+              setTransactions((prev) =>
+                prev.map((t) => (t.id === syncedTransaction.id ? syncedTransaction : t))
+              )
+              
+              // Remove from local storage
+              const updatedEdits = { ...localEdits }
+              delete updatedEdits[txId]
+              localStorage.setItem("zefa_local_edits_v2", JSON.stringify(updatedEdits))
+            } catch (error: any) {
+              // If 404, transaction was deleted - remove local edit
+              if (error.response?.status === 404) {
+                const updatedEdits = { ...localEdits }
+                delete updatedEdits[txId]
+                localStorage.setItem("zefa_local_edits_v2", JSON.stringify(updatedEdits))
+                setTransactions((prev) => prev.filter((t) => t.id !== txId))
+              }
+              // Otherwise, keep as pending for retry later
+            }
+          }
+        })
       }
     }
   }, [transactions.length])

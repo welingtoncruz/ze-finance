@@ -327,5 +327,150 @@ describe("TransactionForm Integration", () => {
       const callArgs = mockOnSubmit.mock.calls[0][0] as Transaction
       expect(callArgs.id).toBe("test-id-123")
     })
+
+    it("preserves custom category when editing transaction with non-predefined category", () => {
+      const initialTransaction: Partial<Transaction> = {
+        amount: 200,
+        type: "expense",
+        category: "Food",
+        date: "2024-01-15",
+      }
+
+      render(
+        <TransactionForm
+          mode="edit"
+          initial={initialTransaction}
+          onSubmit={mockOnSubmit}
+          onCancel={mockOnCancel}
+        />
+      )
+
+      // Custom category should be shown and selected
+      const customCategoryButton = screen.getByTestId("tx-category-Food")
+      expect(customCategoryButton).toBeInTheDocument()
+      expect(customCategoryButton).toHaveAttribute("aria-pressed", "true")
+      
+      // Submit button should be enabled (category is selected)
+      const submitButton = screen.getByTestId("tx-submit")
+      expect(submitButton).not.toBeDisabled()
+    })
+
+    it("normalizes category label to canonical value (Portuguese label -> English value)", () => {
+      const initialTransaction: Partial<Transaction> = {
+        amount: 200,
+        type: "expense",
+        category: "Alimentação", // Portuguese label for Groceries
+        date: "2024-01-15",
+      }
+
+      render(
+        <TransactionForm
+          mode="edit"
+          initial={initialTransaction}
+          onSubmit={mockOnSubmit}
+          onCancel={mockOnCancel}
+        />
+      )
+
+      // Should match to Groceries (canonical value)
+      const groceriesButton = screen.getByTestId("tx-category-Groceries")
+      expect(groceriesButton).toBeInTheDocument()
+      expect(groceriesButton).toHaveAttribute("aria-pressed", "true")
+    })
+
+    it("normalizes category case-insensitively (lowercase -> canonical case)", () => {
+      const initialTransaction: Partial<Transaction> = {
+        amount: 200,
+        type: "expense",
+        category: "groceries", // lowercase
+        date: "2024-01-15",
+      }
+
+      render(
+        <TransactionForm
+          mode="edit"
+          initial={initialTransaction}
+          onSubmit={mockOnSubmit}
+          onCancel={mockOnCancel}
+        />
+      )
+
+      // Should match to Groceries (canonical case)
+      const groceriesButton = screen.getByTestId("tx-category-Groceries")
+      expect(groceriesButton).toBeInTheDocument()
+      expect(groceriesButton).toHaveAttribute("aria-pressed", "true")
+    })
+
+    it("keeps custom category when switching transaction type", async () => {
+      const user = userEvent.setup()
+
+      const initialTransaction: Partial<Transaction> = {
+        amount: 200,
+        type: "expense",
+        category: "CustomCategory",
+        date: "2024-01-15",
+      }
+
+      render(
+        <TransactionForm
+          mode="edit"
+          initial={initialTransaction}
+          onSubmit={mockOnSubmit}
+          onCancel={mockOnCancel}
+        />
+      )
+
+      // Custom category should be selected
+      const customButton = screen.getByTestId("tx-category-CustomCategory")
+      expect(customButton).toHaveAttribute("aria-pressed", "true")
+
+      // Switch to income
+      const incomeToggle = screen.getByRole("button", { name: /receita/i })
+      await user.click(incomeToggle)
+
+      // Custom category should still be selected (not cleared)
+      await waitFor(() => {
+        const customButtonAfter = screen.getByTestId("tx-category-CustomCategory")
+        expect(customButtonAfter).toHaveAttribute("aria-pressed", "true")
+      })
+    })
+
+    it("clears predefined category when switching to invalid type", async () => {
+      const user = userEvent.setup()
+
+      const initialTransaction: Partial<Transaction> = {
+        amount: 200,
+        type: "expense",
+        category: "Groceries", // Predefined expense category
+        date: "2024-01-15",
+      }
+
+      render(
+        <TransactionForm
+          mode="edit"
+          initial={initialTransaction}
+          onSubmit={mockOnSubmit}
+          onCancel={mockOnCancel}
+        />
+      )
+
+      // Groceries should be selected
+      const groceriesButton = screen.getByTestId("tx-category-Groceries")
+      expect(groceriesButton).toHaveAttribute("aria-pressed", "true")
+
+      // Switch to income
+      const incomeToggle = screen.getByRole("button", { name: /receita/i })
+      await user.click(incomeToggle)
+
+      // Groceries should be cleared (not valid for income)
+      await waitFor(() => {
+        const groceriesButtonAfter = screen.queryByTestId("tx-category-Groceries")
+        expect(groceriesButtonAfter).not.toBeInTheDocument()
+        
+        // Submit should be disabled (no category selected)
+        const submitButton = screen.getByTestId("tx-submit")
+        expect(submitButton).toBeDisabled()
+      })
+    })
   })
 })

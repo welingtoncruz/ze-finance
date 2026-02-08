@@ -104,3 +104,41 @@ export function getCategoriesByType(type: TransactionType): CategoryDefinition[]
 export function getCategoryByValue(value: string): CategoryDefinition | undefined {
   return CATEGORIES.find((cat) => cat.value === value)
 }
+
+/**
+ * Resolve a category value or label to its canonical value.
+ * Handles case-insensitive matching for both values and labels.
+ * Returns null if no match is found (custom/unknown category).
+ */
+export function resolveCategoryValue(valueOrLabel: string): string | null {
+  if (!valueOrLabel) return null
+  
+  const normalized = valueOrLabel.trim()
+  if (!normalized) return null
+  
+  // Try exact match first (case-sensitive)
+  const exactMatch = CATEGORIES.find((cat) => cat.value === normalized)
+  if (exactMatch) return exactMatch.value
+  
+  // Try case-insensitive value match
+  const valueMatch = CATEGORIES.find(
+    (cat) => cat.value.toLowerCase() === normalized.toLowerCase()
+  )
+  if (valueMatch) return valueMatch.value
+  
+  // Try case-insensitive label match
+  const labelMatch = CATEGORIES.find(
+    (cat) => cat.label.toLowerCase() === normalized.toLowerCase()
+  )
+  if (labelMatch) return labelMatch.value
+  
+  // No match found - custom category
+  return null
+}
+
+/**
+ * Check if a category value is a predefined category (exists in CATEGORIES)
+ */
+export function isPredefinedCategory(value: string): boolean {
+  return CATEGORIES.some((cat) => cat.value === value)
+}

@@ -86,7 +86,7 @@ export function DashboardScreen({
               <Wallet className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-primary-foreground/70">Welcome back,</p>
+              <p className="text-xs text-primary-foreground/70">Bem-vindo de volta,</p>
               <h1 className="text-base sm:text-lg font-semibold text-primary-foreground tracking-tight truncate">
                 {userProfile.name}
               </h1>
@@ -108,7 +108,7 @@ export function DashboardScreen({
       <header className="hidden lg:block sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border/50 px-8 py-6">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-muted-foreground">Welcome back,</p>
+            <p className="text-sm text-muted-foreground">Bem-vindo de volta,</p>
             <h1 className="text-2xl font-bold text-foreground tracking-tight truncate">
               {userProfile.name}
             </h1>
@@ -117,7 +117,7 @@ export function DashboardScreen({
             {userProfile.streak > 0 && (
               <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2">
                 <Flame className="h-5 w-5 text-primary" />
-                <span className="text-sm font-semibold text-primary">{userProfile.streak} day streak</span>
+                <span className="text-sm font-semibold text-primary">{userProfile.streak} dias de sequência</span>
               </div>
             )}
           </div>
@@ -137,7 +137,7 @@ export function DashboardScreen({
                 <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
                   <div className="min-w-0">
                     <p className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                      Total Balance
+                      Saldo total
                     </p>
                     <p className="mt-1 text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground animate-count tabular-nums">
                       {formatCurrency(balance)}
@@ -152,7 +152,7 @@ export function DashboardScreen({
                       <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-success-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Income</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Receita</p>
                       <p className="text-sm sm:text-base lg:text-lg font-semibold text-success-foreground tabular-nums truncate">
                         {formatCurrency(totalIncome)}
                       </p>
@@ -166,7 +166,7 @@ export function DashboardScreen({
                       <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-destructive" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Expenses</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Despesas</p>
                       <p className="text-sm sm:text-base lg:text-lg font-semibold text-destructive tabular-nums truncate">
                         {formatCurrency(totalExpense)}
                       </p>
@@ -199,7 +199,7 @@ export function DashboardScreen({
               <Card className="glass-card border-0 hover-lift">
                 <CardHeader className="pb-2 px-4 sm:px-6 pt-4 sm:pt-5">
                   <CardTitle className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    Last 7 Days Spending
+                    Gastos dos últimos 7 dias
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pb-4 px-2 sm:px-4">
@@ -230,7 +230,7 @@ export function DashboardScreen({
                             fontSize: "12px",
                             padding: "8px 12px",
                           }}
-                          formatter={(value: number) => [formatCurrencyFull(value), "Spent"]}
+                          formatter={(value: number) => [formatCurrencyFull(value), "Gasto"]}
                           labelStyle={{ color: "var(--color-muted-foreground)", marginBottom: "4px" }}
                         />
                         <Area
@@ -251,15 +251,15 @@ export function DashboardScreen({
             <Card className="glass-card border-0 hover-lift">
               <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 sm:px-6 pt-4 sm:pt-5">
                 <CardTitle className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  Recent Transactions
+                  Transações recentes
                 </CardTitle>
                 {recentTransactions.length > 0 && (
                   <button
                     onClick={onViewHistory}
                     className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80 touch-target"
                   >
-                    <span className="hidden sm:inline">View All</span>
-                    <span className="sm:hidden">All</span>
+                    <span className="hidden sm:inline">Ver todas</span>
+                    <span className="sm:hidden">Todas</span>
                     <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                 )}
@@ -273,8 +273,8 @@ export function DashboardScreen({
                   ))
                 ) : (
                   <EmptyState
-                    title="No transactions yet"
-                    description="Tap the + button to add your first transaction"
+                    title="Nenhuma transação ainda"
+                    description="Toque no + para adicionar sua primeira transação"
                   />
                 )}
               </CardContent>

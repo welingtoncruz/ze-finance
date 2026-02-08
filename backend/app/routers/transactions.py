@@ -56,6 +56,37 @@ async def create_transaction(
     return transaction
 
 
+@router.patch("/{transaction_id}", response_model=schemas.TransactionResponse)
+async def update_transaction(
+    transaction_id: UUID,
+    tx_update: schemas.TransactionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> schemas.TransactionResponse:
+    """
+    Update a transaction if it belongs to the authenticated user.
+    
+    Args:
+        transaction_id: UUID of the transaction to update
+        tx_update: Transaction update data (partial fields)
+        current_user: Authenticated user (from JWT)
+        db: Database session
+        
+    Returns:
+        Updated transaction response
+        
+    Raises:
+        HTTPException: If transaction not found (404) or validation fails (422)
+    """
+    updated = await crud.update_user_transaction(db, transaction_id, current_user.id, tx_update)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transaction not found",
+        )
+    return updated
+
+
 @router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_transaction(
     transaction_id: UUID,

@@ -37,8 +37,8 @@ export function BudgetBar({ spent, budget }: BudgetBarProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Monthly Budget</span>
-        <span className="font-medium text-foreground">{formatCurrency(remaining)} left</span>
+        <span className="text-muted-foreground">Orçamento mensal</span>
+        <span className="font-medium text-foreground">{formatCurrency(remaining)} restantes</span>
       </div>
       <div className="relative h-2 overflow-hidden rounded-full bg-muted">
         <div
@@ -47,8 +47,8 @@ export function BudgetBar({ spent, budget }: BudgetBarProps) {
         />
       </div>
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{formatCurrency(spent)} spent</span>
-        <span>{formatCurrency(budget)} budget</span>
+        <span>{formatCurrency(spent)} gasto</span>
+        <span>{formatCurrency(budget)} orçamento</span>
       </div>
     </div>
   )

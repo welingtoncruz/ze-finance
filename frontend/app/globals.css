@@ -40,6 +40,10 @@
   --sidebar-ring: oklch(0.55 0.16 165);
   --success: oklch(0.65 0.18 145);
   --success-foreground: oklch(0.2 0.06 145);
+  --electric-lime: oklch(0.88 0.2 120);
+  --electric-lime-foreground: oklch(0.2 0.08 120);
+  --deep-indigo: oklch(0.4 0.15 270);
+  --deep-indigo-foreground: oklch(1 0 0);
 }
 
 .dark {
@@ -78,6 +82,10 @@
   --sidebar-ring: oklch(0.7 0.18 165);
   --success: oklch(0.72 0.2 145);
   --success-foreground: oklch(0.85 0.15 145);
+  --electric-lime: oklch(0.85 0.22 120);
+  --electric-lime-foreground: oklch(0.15 0.06 120);
+  --deep-indigo: oklch(0.45 0.18 270);
+  --deep-indigo-foreground: oklch(0.98 0 0);
 }
 
 @theme inline {
@@ -121,6 +129,10 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-electric-lime: var(--electric-lime);
+  --color-electric-lime-foreground: var(--electric-lime-foreground);
+  --color-deep-indigo: var(--deep-indigo);
+  --color-deep-indigo-foreground: var(--deep-indigo-foreground);
 }
 
 @layer base {

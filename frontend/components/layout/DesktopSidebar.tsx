@@ -32,9 +32,9 @@ export function DesktopSidebar({
   const router = useRouter()
 
   const navItems = [
-    { route: "/", icon: Home, label: "Dashboard" },
+    { route: "/", icon: Home, label: "Início" },
     { route: "/chat", icon: Sparkles, label: "Zefa" },
-    { route: "/insights", icon: BarChart3, label: "Insights" },
+    { route: "/insights", icon: BarChart3, label: "Análises" },
     { route: "/transactions", icon: Receipt, label: "Transações" },
   ]
 
@@ -86,7 +86,7 @@ export function DesktopSidebar({
               <p className="font-semibold text-foreground truncate">{userProfile.name}</p>
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3 text-accent" />
-                <span className="text-xs text-muted-foreground">{userProfile.streak} day streak</span>
+                <span className="text-xs text-muted-foreground">{userProfile.streak} dias de sequência</span>
               </div>
             </div>
           </div>
@@ -139,7 +139,7 @@ export function DesktopSidebar({
       {/* Footer */}
       <div className="border-t border-border/50 p-4 space-y-2">
         <div className={cn("flex items-center", isCollapsed ? "justify-center" : "justify-between px-2")}>
-          {!isCollapsed && <span className="text-xs text-muted-foreground">Theme</span>}
+          {!isCollapsed && <span className="text-xs text-muted-foreground">Tema</span>}
           <ThemeToggle variant="standalone" />
         </div>
         <button

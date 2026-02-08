@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2, TrendingUp, TrendingDown } from "lucide-react"
 import type { Transaction, TransactionType } from "@/lib/types"
 import { CategoryPicker } from "./CategoryPicker"
-import { getCategoriesByType } from "@/lib/transactions/categories"
+import { getCategoriesByType, resolveCategoryValue, isPredefinedCategory } from "@/lib/transactions/categories"
 
 interface TransactionFormProps {
   mode: "create" | "edit"
@@ -29,21 +29,32 @@ export function TransactionForm({
   const [type, setType] = useState<TransactionType>(
     initial?.type || "expense"
   )
-  const [category, setCategory] = useState(initial?.category || "")
+  // Normalize initial category: resolve to canonical value if possible, otherwise keep raw string
+  const initialCategory = initial?.category || ""
+  const normalizedInitialCategory = resolveCategoryValue(initialCategory) || initialCategory
+  const [category, setCategory] = useState(normalizedInitialCategory)
   const [date, setDate] = useState(
     initial?.date || new Date().toISOString().split("T")[0]
   )
   const [description, setDescription] = useState(initial?.description || "")
   const [isLoading, setIsLoading] = useState(false)
 
-  // Reset category when type changes if current category is not valid for new type
+  // Reset category when type changes ONLY if it's a predefined category that's invalid for the new type
+  // Custom categories should be preserved
   useEffect(() => {
     if (category) {
-      const categories = getCategoriesByType(type)
-      const isValid = categories.some((cat) => cat.value === category)
-      if (!isValid) {
-        setCategory("")
+      const resolvedValue = resolveCategoryValue(category)
+      
+      // If it resolves to a canonical value, check if it's valid for current type
+      if (resolvedValue) {
+        const categories = getCategoriesByType(type)
+        const isValid = categories.some((cat) => cat.value === resolvedValue)
+        if (!isValid) {
+          // Only clear if it's a predefined category that's invalid for this type
+          setCategory("")
+        }
       }
+      // If it doesn't resolve (custom category), keep it - don't clear
     }
   }, [type, category])
 
@@ -74,20 +85,26 @@ export function TransactionForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="flex flex-col min-h-full">
+      <div className="flex-1 overflow-y-auto space-y-5 -mx-4 px-4 pb-4">
       {/* Type Toggle */}
       <div className="flex gap-2 rounded-xl bg-muted p-1">
         <button
           type="button"
           onClick={() => {
             setType("expense")
-            // Only reset category if it's not valid for the new type
+            // Only reset category if it's a predefined category that's not valid for the new type
             if (category) {
-              const categories = getCategoriesByType("expense")
-              const isValid = categories.some((cat) => cat.value === category)
-              if (!isValid) {
-                setCategory("")
+              const resolvedValue = resolveCategoryValue(category)
+              if (resolvedValue) {
+                // It's a predefined category - check if valid for expense
+                const categories = getCategoriesByType("expense")
+                const isValid = categories.some((cat) => cat.value === resolvedValue)
+                if (!isValid) {
+                  setCategory("")
+                }
               }
+              // If custom category, keep it
             }
           }}
           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 font-medium transition-all ${
@@ -103,13 +120,18 @@ export function TransactionForm({
           type="button"
           onClick={() => {
             setType("income")
-            // Only reset category if it's not valid for the new type
+            // Only reset category if it's a predefined category that's not valid for the new type
             if (category) {
-              const categories = getCategoriesByType("income")
-              const isValid = categories.some((cat) => cat.value === category)
-              if (!isValid) {
-                setCategory("")
+              const resolvedValue = resolveCategoryValue(category)
+              if (resolvedValue) {
+                // It's a predefined category - check if valid for income
+                const categories = getCategoriesByType("income")
+                const isValid = categories.some((cat) => cat.value === resolvedValue)
+                if (!isValid) {
+                  setCategory("")
+                }
               }
+              // If custom category, keep it
             }
           }}
           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 font-medium transition-all ${
@@ -182,9 +204,9 @@ export function TransactionForm({
           data-testid="tx-description"
         />
       </div>
-
-      {/* Action Buttons */}
-      <div className="flex gap-2 pt-2">
+      </div>
+      {/* Action Buttons - Fixed at bottom */}
+      <div className="flex gap-2 pt-4 mt-auto border-t border-border shrink-0 bg-card sticky bottom-0 -mx-4 px-4 pb-2">
         {onCancel && (
           <Button
             type="button"

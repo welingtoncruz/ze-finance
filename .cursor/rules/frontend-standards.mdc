@@ -27,15 +27,22 @@ frontend/
 │   ├── page.tsx           # Dashboard (Home)
 │   ├── login/             # Login Feature
 │   ├── register/          # Register Feature
+│   ├── chat/              # Chat (Zefa) Feature
+│   ├── transactions/      # Transactions list & form
 │   └── globals.css        # Tailwind directives + CSS variables (tokens)
 ├── components/
 │   ├── ui/                # Shadcn primitives (Button, Card, Input...)
 │   ├── layout/            # Header/sidebar/bottom-nav/page scaffolds
 │   ├── dashboard/         # Dashboard widgets
-│   └── forms/             # Reusable form components
+│   ├── chat/              # Zefa chat (ZefaChatScreen, ChatBubble, search, etc.)
+│   └── transactions/      # Transaction form, list, category picker
 ├── lib/
 │   ├── api.ts             # Axios instance & interceptors
-│   └── utils.ts           # Helpers (cn, format currency)
+│   ├── utils.ts           # Helpers (cn, format currency)
+│   ├── chat/              # Chat API service
+│   ├── hooks/             # useChat, useDebouncedValue, etc.
+│   ├── markdown/          # Markdown plugins (e.g. search highlight)
+│   └── transactions/      # Categories and transaction helpers
 ├── context/
 │   └── AuthContext.tsx    # Auth logic & user state
 └── public/

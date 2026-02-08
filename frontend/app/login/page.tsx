@@ -27,15 +27,15 @@ export default function LoginPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Invalid email or password. Please try again."
+          : "E-mail ou senha inválidos. Tente novamente."
       )
     }
   }
 
   const features = [
-    { icon: BarChart3, title: "Smart Analytics", description: "AI-powered insights into your spending" },
-    { icon: Shield, title: "Bank-grade Security", description: "Your data is encrypted and protected" },
-    { icon: Zap, title: "Real-time Sync", description: "Instant updates across all devices" },
+    { icon: BarChart3, title: "Análises inteligentes", description: "Insights com IA sobre seus gastos" },
+    { icon: Shield, title: "Segurança de nível bancário", description: "Seus dados são criptografados e protegidos" },
+    { icon: Zap, title: "Sincronização em tempo real", description: "Atualizações instantâneas em todos os dispositivos" },
   ]
 
   if (!isHydrated) {
@@ -75,16 +75,16 @@ export default function LoginPage() {
               </div>
               <div>
                 <h1 className="text-4xl font-bold gradient-text">Ze Finance</h1>
-                <p className="text-muted-foreground">Premium Finance Manager</p>
+                <p className="text-muted-foreground">Gestor de finanças premium</p>
               </div>
             </div>
 
             <h2 className="text-4xl xl:text-5xl font-bold text-foreground leading-tight mb-6">
-              Take control of your{" "}
-              <span className="gradient-text">financial future</span>
+              Assuma o controle do seu{" "}
+              <span className="gradient-text">futuro financeiro</span>
             </h2>
             <p className="text-lg text-muted-foreground mb-12">
-              Track expenses, set budgets, and achieve your savings goals with intelligent insights powered by modern analytics.
+              Acompanhe gastos, defina orçamentos e alcance suas metas de economia com insights inteligentes.
             </p>
 
             {/* Feature Cards */}
@@ -125,7 +125,7 @@ export default function LoginPage() {
             <h1 className="mt-8 text-4xl font-bold gradient-text">Ze Finance</h1>
             <div className="mt-2 flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-accent" />
-              <p className="text-base font-medium text-muted-foreground">Premium Finance Manager</p>
+              <p className="text-base font-medium text-muted-foreground">Gestor de finanças premium</p>
             </div>
           </div>
 
@@ -133,12 +133,12 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Não tem uma conta?{" "}
               <button
                 onClick={() => router.push("/register")}
                 className="font-semibold text-primary hover:underline"
               >
-                Sign up
+                Cadastrar-se
               </button>
             </p>
           </div>
@@ -147,15 +147,15 @@ export default function LoginPage() {
           <div className="lg:hidden relative z-10 mt-8 flex items-center gap-6 text-xs text-muted-foreground animate-slide-up" style={{ animationDelay: "0.2s" }}>
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-accent" />
-              <span>Smart Insights</span>
+              <span>Insights inteligentes</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-accent" />
-              <span>Dark Mode</span>
+              <span>Modo escuro</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-accent" />
-              <span>Secure</span>
+              <span>Seguro</span>
             </div>
           </div>
         </div>

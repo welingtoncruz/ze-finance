@@ -34,8 +34,8 @@ export function InsightsCard({ transactions, monthlyBudget }: InsightsCardProps)
   let insight = {
     type: "tip" as const,
     icon: Lightbulb,
-    title: "Getting Started",
-    message: "Add some transactions to see personalized insights!",
+    title: "Começando",
+    message: "Adicione transações para ver insights personalizados!",
     color: "text-primary",
     bg: "bg-primary/10",
   }
@@ -44,8 +44,8 @@ export function InsightsCard({ transactions, monthlyBudget }: InsightsCardProps)
     insight = {
       type: "warning",
       icon: AlertTriangle,
-      title: "Budget Alert",
-      message: `You've used ${Math.round(budgetUsed)}% of your monthly budget. Consider reducing expenses.`,
+      title: "Alerta de orçamento",
+      message: `Você usou ${Math.round(budgetUsed)}% do seu orçamento mensal. Considere reduzir gastos.`,
       color: "text-destructive",
       bg: "bg-destructive/10",
     }
@@ -53,8 +53,8 @@ export function InsightsCard({ transactions, monthlyBudget }: InsightsCardProps)
     insight = {
       type: "warning",
       icon: TrendingDown,
-      title: "Heads Up",
-      message: `${Math.round(budgetUsed)}% of budget used. R$${remaining.toFixed(0)} remaining this month.`,
+      title: "Atenção",
+      message: `${Math.round(budgetUsed)}% do orçamento usado. R$ ${remaining.toFixed(0)} restantes este mês.`,
       color: "text-chart-4",
       bg: "bg-chart-4/10",
     }
@@ -62,8 +62,8 @@ export function InsightsCard({ transactions, monthlyBudget }: InsightsCardProps)
     insight = {
       type: "tip",
       icon: Lightbulb,
-      title: "Spending Pattern",
-      message: `Your top expense category is ${topCategory[0]} at R$${topCategory[1].toFixed(0)} this month.`,
+      title: "Padrão de gastos",
+      message: `Sua maior categoria de gastos é ${topCategory[0]} com R$ ${topCategory[1].toFixed(0)} este mês.`,
       color: "text-primary",
       bg: "bg-primary/10",
     }
@@ -71,8 +71,8 @@ export function InsightsCard({ transactions, monthlyBudget }: InsightsCardProps)
     insight = {
       type: "tip",
       icon: TrendingUp,
-      title: "Great Progress!",
-      message: `You have R$${remaining.toFixed(0)} remaining. Consider adding to your savings!`,
+      title: "Ótimo progresso!",
+      message: `Você tem R$ ${remaining.toFixed(0)} restantes. Considere aumentar suas economias!`,
       color: "text-success-foreground",
       bg: "bg-success/15",
     }

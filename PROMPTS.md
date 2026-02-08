@@ -157,6 +157,92 @@ All changes followed:
 
 ---
 
+### 6) AI Chat Agent Backend Implementation (feat-8)
+
+**Implementation Plan:**
+The `/develop-backend` command was used to implement the Zefa AI chat agent backend:
+
+**Key Features Implemented:**
+- Database models for chat messages and conversation summaries
+- AI gateway with provider abstraction (OpenAI/Anthropic)
+- Tool-based function calling for finance operations:
+  - `get_balance`: Get user's current balance
+  - `list_transactions`: List transactions with filters
+  - `create_transaction`: Create transactions via natural language
+  - `analyze_spending`: Analyze spending patterns
+- Chat persistence and conversation memory
+- Ephemeral API key management (in-memory, TTL-based)
+- Integration tests with mocked AI provider calls
+
+**Architecture:**
+- Modular structure: `app/ai/` (gateway, tools, prompt) and `app/chat/` (CRUD, routes, schemas)
+- Provider-agnostic design allows switching between OpenAI and Anthropic
+- Strict data isolation: all operations scoped by authenticated `user_id`
+- Portuguese (pt-BR) responses for users, English for technical artifacts
+
+**Testing:**
+- Comprehensive integration tests in `tests/test_chat_agent.py`
+- Tests cover: balance queries, transaction creation, user isolation, provider errors
+- Uses `respx` for mocking AI provider HTTP calls
+
+**Documentation Updates:**
+- Updated `PROJECT_DOCUMENTATION.md` with chat features
+- Updated `TECHNICAL_DOCUMENTATION.md` with data model changes
+- Updated `backend/README.md` with AI configuration and endpoints
+- Updated `PROMPTS.md` with implementation details
+
+---
+
+### 7) Chat Frontend Integration (feat-9)
+
+**Implementation Plan:**
+The `/develop-frontend` command was used to implement the frontend chat integration:
+
+**Key Features Implemented:**
+- Backend-integrated chat UI replacing simulated responses
+- `useChat` hook with localStorage persistence for conversation continuity (survives browser close/reopen)
+- Optimistic UI: user messages appear immediately with "sending" status
+- Auto-scroll to latest message and typing indicator
+- Error handling with retry functionality for failed messages
+- Transaction confirmation cards with Electric Lime styling (ready for backend metadata)
+- Responsive-first design maintained (mobile/tablet/desktop)
+
+**Component Architecture:**
+- `ChatBubble.tsx`: Renders messages with status indicators (sending/sent/error) and retry buttons
+- `TypingIndicator.tsx`: Shows "Zefa está digitando..." animation
+- `TransactionConfirmationCard.tsx`: Electric Lime styled success card for transaction confirmations
+- `ZefaChatScreen.tsx`: Refactored to use `useChat` hook, removed voice/simulation logic
+
+**State Management:**
+- `useChat` hook (`lib/hooks/useChat.ts`): Manages messages array, conversation ID, typing state
+- localStorage persistence (key: `zefa_chat_v1:default`) for conversation continuity
+- Optimistic updates: user messages appear immediately, then updated to "sent" on success
+- Error states: failed messages show retry buttons with user-friendly error messages
+
+**API Service Layer:**
+- `lib/chat/service.ts`: Normalization layer for backend API
+- Handles current format (`POST /chat/messages`) and ready for future format (`POST /chat`)
+- Error mapping: Timeout (30s), network errors, 401 redirects
+- Returns normalized `ApiChatResponse` structure
+
+**Styling:**
+- Added Electric Lime color tokens to `globals.css` for transaction confirmations
+- Maintains responsive-first design principles
+- User bubbles: Indigo theme; Assistant bubbles: muted theme
+
+**Testing:**
+- Integration tests (`tests/integration/chat-integration.test.tsx`): 10 tests covering UI flows
+- Unit tests (`tests/unit/useChat.test.ts`): 10 tests for hook logic
+- Unit tests (`tests/unit/chat-service.test.ts`): 7 tests for API service
+- All 60 frontend tests passing
+
+**Documentation Updates:**
+- Updated `PROJECT_DOCUMENTATION.md` with chat integration ticket and details
+- Updated `TECHNICAL_DOCUMENTATION.md` with frontend architecture changes
+- Updated `PROMPTS.md` with implementation details
+
+---
+
 ### 5) Methodology Summary (for the form)
 
 My journey was guided by **technical pragmatism**. Instead of starting by coding complex features, I invested time in refining scope and configuring the AI environment (context + rules).

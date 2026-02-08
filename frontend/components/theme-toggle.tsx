@@ -30,7 +30,7 @@ export function ThemeToggle({ variant = "header" }: { variant?: "header" | "stan
           ? "bg-primary-foreground/10 hover:bg-primary-foreground/20"
           : "bg-muted hover:bg-muted/80"
       }`}
-      aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
+      aria-label={resolvedTheme === "dark" ? "Mudar para modo claro" : "Mudar para modo escuro"}
     >
       <Sun
         className={`h-4 w-4 transition-all duration-300 ${

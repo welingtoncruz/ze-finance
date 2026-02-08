@@ -41,12 +41,12 @@ export function AuthForm({ mode, onSubmit, error }: AuthFormProps) {
     <Card className="relative z-10 w-full max-w-md glass-card border-0 shadow-2xl animate-slide-up">
       <CardHeader className="space-y-1 pb-4">
         <CardTitle className="text-2xl font-bold">
-          {mode === "login" ? "Welcome back" : "Create account"}
+          {mode === "login" ? "Bem-vindo de volta" : "Criar conta"}
         </CardTitle>
         <CardDescription>
           {mode === "login"
-            ? "Enter your credentials to continue"
-            : "Sign up to get started"}
+            ? "Digite suas credenciais para continuar"
+            : "Cadastre-se para começar"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -63,7 +63,7 @@ export function AuthForm({ mode, onSubmit, error }: AuthFormProps) {
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -78,7 +78,7 @@ export function AuthForm({ mode, onSubmit, error }: AuthFormProps) {
             <Input
               id="password"
               type="password"
-              placeholder={mode === "login" ? "Enter your password" : "At least 8 characters"}
+              placeholder={mode === "login" ? "Digite sua senha" : "Mínimo de 8 caracteres"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -96,10 +96,10 @@ export function AuthForm({ mode, onSubmit, error }: AuthFormProps) {
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {mode === "login" ? "Signing in..." : "Creating account..."}
+                {mode === "login" ? "Entrando..." : "Criando conta..."}
               </>
             ) : (
-              mode === "login" ? "Sign In" : "Sign Up"
+              mode === "login" ? "Entrar" : "Cadastrar"
             )}
           </Button>
         </form>

@@ -3,6 +3,8 @@ import {
   getCategoriesByType,
   getCategoryLabel,
   getCategoryByValue,
+  resolveCategoryValue,
+  isPredefinedCategory,
   CATEGORIES,
 } from "@/lib/transactions/categories"
 import type { TransactionType } from "@/lib/types"
@@ -68,6 +70,61 @@ describe("Category Helpers", () => {
     it("returns undefined for non-existent value", () => {
       const result = getCategoryByValue("NonExistent")
       expect(result).toBeUndefined()
+    })
+  })
+
+  describe("resolveCategoryValue", () => {
+    it("returns canonical value for exact match", () => {
+      const result = resolveCategoryValue("Salary")
+      expect(result).toBe("Salary")
+    })
+
+    it("returns canonical value for case-insensitive value match", () => {
+      const result = resolveCategoryValue("salary")
+      expect(result).toBe("Salary")
+    })
+
+    it("returns canonical value for Portuguese label match", () => {
+      const result = resolveCategoryValue("Alimentação")
+      expect(result).toBe("Groceries")
+    })
+
+    it("returns canonical value for case-insensitive label match", () => {
+      const result = resolveCategoryValue("alimentação")
+      expect(result).toBe("Groceries")
+    })
+
+    it("returns null for custom/unknown category", () => {
+      const result = resolveCategoryValue("CustomCategory")
+      expect(result).toBeNull()
+    })
+
+    it("returns null for empty string", () => {
+      const result = resolveCategoryValue("")
+      expect(result).toBeNull()
+    })
+
+    it("trims whitespace before matching", () => {
+      const result = resolveCategoryValue("  Salary  ")
+      expect(result).toBe("Salary")
+    })
+  })
+
+  describe("isPredefinedCategory", () => {
+    it("returns true for predefined category value", () => {
+      expect(isPredefinedCategory("Salary")).toBe(true)
+      expect(isPredefinedCategory("Groceries")).toBe(true)
+      expect(isPredefinedCategory("Other")).toBe(true)
+    })
+
+    it("returns false for custom category", () => {
+      expect(isPredefinedCategory("CustomCategory")).toBe(false)
+      expect(isPredefinedCategory("Food")).toBe(false)
+    })
+
+    it("returns false for case mismatch", () => {
+      expect(isPredefinedCategory("salary")).toBe(false)
+      expect(isPredefinedCategory("GROCERIES")).toBe(false)
     })
   })
 })

@@ -92,6 +92,7 @@ export function TransactionsScreen({
               onClick={onAddTransaction}
               size="sm"
               className="h-10 w-10 rounded-xl bg-primary-foreground/15 hover:bg-primary-foreground/25 p-0"
+              aria-label="Adicionar transação"
             >
               <Plus className="h-5 w-5 text-primary-foreground" />
             </Button>
@@ -199,8 +200,8 @@ export function TransactionsScreen({
             <Card className="glass-card border-0">
               <CardContent className="p-8">
                 <EmptyState
-                  title="No transactions found"
-                  description="Add your first transaction to get started"
+                  title="Nenhuma transação encontrada"
+                  description="Adicione sua primeira transação para começar"
                   type="transactions"
                 />
               </CardContent>
@@ -234,7 +235,7 @@ export function TransactionsScreen({
       <button
         onClick={onAddTransaction}
         className="fab-glow fixed bottom-24 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary lg:hidden touch-target"
-        aria-label="Add transaction"
+        aria-label="Adicionar transação"
       >
         <Plus className="h-6 w-6 text-primary-foreground" />
       </button>
