@@ -19,8 +19,9 @@ export function EditTransactionDrawer({
 }: EditTransactionDrawerProps) {
   if (!transaction) return null
 
-  const handleSave = async (data: Transaction) => {
-    await onSave(data)
+  const handleSave = async (data: Transaction | Omit<Transaction, "id">) => {
+    const tx: Transaction = "id" in data ? data : { ...data, id: transaction.id }
+    await onSave(tx)
     onClose()
   }
 
