@@ -15,8 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Expose port
-EXPOSE 8000
+# Cloud Run sets PORT=8080; run.py reads it from env
+EXPOSE 8080
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Entrypoint reads PORT from env (Cloud Run sets 8080)
+CMD ["python", "run.py"]

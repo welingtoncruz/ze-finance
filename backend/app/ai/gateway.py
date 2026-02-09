@@ -203,17 +203,17 @@ def get_api_key(user_id: UUID) -> Optional[str]:
     Returns:
         API key if available, None otherwise
     """
-    # First check environment variable
+    # First check environment variable (strip to avoid \r\n from GCP Secret Manager)
     if AI_PROVIDER == "openai":
-        env_key = os.getenv("OPENAI_API_KEY")
+        env_key = (os.getenv("OPENAI_API_KEY") or "").strip()
         if env_key:
             return env_key
     elif AI_PROVIDER == "anthropic":
-        env_key = os.getenv("ANTHROPIC_API_KEY")
+        env_key = (os.getenv("ANTHROPIC_API_KEY") or "").strip()
         if env_key:
             return env_key
     elif AI_PROVIDER == "gemini":
-        env_key = os.getenv("GEMINI_API_KEY")
+        env_key = (os.getenv("GEMINI_API_KEY") or "").strip()
         if env_key:
             return env_key
     
@@ -222,7 +222,7 @@ def get_api_key(user_id: UUID) -> Optional[str]:
         key_data = _ephemeral_api_keys[user_id]
         # Check if expired
         if datetime.utcnow() < key_data["expires_at"]:
-            return key_data["key"]
+            return (key_data["key"] or "").strip()
         else:
             # Remove expired key
             del _ephemeral_api_keys[user_id]
@@ -240,7 +240,7 @@ def set_ephemeral_api_key(user_id: UUID, api_key: str, ttl_minutes: int = 60) ->
         ttl_minutes: Time to live in minutes (default 60)
     """
     _ephemeral_api_keys[user_id] = {
-        "key": api_key,
+        "key": (api_key or "").strip(),
         "expires_at": datetime.utcnow() + timedelta(minutes=ttl_minutes),
     }
 
@@ -297,7 +297,9 @@ async def _call_openai(
         raise ImportError("openai package is required. Install with: pip install openai")
     
     if not api_key:
-        api_key = os.getenv("OPENAI_API_KEY")
+        api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    else:
+        api_key = (api_key or "").strip()
     
     if not api_key:
         raise ValueError("OpenAI API key is required")
@@ -365,7 +367,9 @@ async def _call_anthropic(
         raise ImportError("anthropic package is required. Install with: pip install anthropic")
     
     if not api_key:
-        api_key = os.getenv("ANTHROPIC_API_KEY")
+        api_key = (os.getenv("ANTHROPIC_API_KEY") or "").strip()
+    else:
+        api_key = (api_key or "").strip()
     
     if not api_key:
         raise ValueError("Anthropic API key is required")
@@ -446,12 +450,14 @@ async def _call_gemini(
         raise ImportError("google-genai package is required. Install with: pip install google-genai")
     
     if not api_key:
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
+    else:
+        api_key = (api_key or "").strip()
     
     if not api_key:
         raise ValueError("Gemini API key is required")
     
-    # Create client
+    # Create client (strip avoids InvalidHeader from \r\n in GCP Secret Manager value)
     client = genai.Client(api_key=api_key)
     
     # Convert messages format - build conversation history and current message
