@@ -1,8 +1,11 @@
 """
 FastAPI application entrypoint and configuration.
 """
+import asyncio
 import os
 from contextlib import asynccontextmanager
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,19 +15,21 @@ from app.routers import auth, dashboard, transactions
 from app.chat import routes as chat_routes
 
 
+async def _ensure_tables() -> None:
+    """Create tables if not exist (MVP approach - use Alembic in production)."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Lifespan context manager for startup and shutdown events.
-    Creates database tables on startup (MVP approach - use Alembic in production).
+    Start listening first so Cloud Run sees the container ready; run DB init in background.
     """
-    # Create tables (MVP approach - replace with Alembic migrations later)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
+    # Run table creation in background so we don't block binding to PORT (Cloud Run timeout)
+    asyncio.create_task(_ensure_tables())
     yield
-    
-    # Shutdown logic (if needed)
     await engine.dispose()
 
 
@@ -36,23 +41,47 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS
-allowed_origins_str = os.getenv("ALLOWED_ORIGINS", '["http://localhost:3000"]')
-# Simple parsing for JSON array string (for MVP)
+# Configure CORS: accept JSON array or single origin (GCP env can be stored without brackets)
+# Normalize: strip trailing slash so "https://ze-finance.vercel.app/" matches browser "https://ze-finance.vercel.app"
+import json
+
+def _normalize_origin(o: str) -> str:
+    return (o or "").strip().rstrip("/")
+
+_allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", '["http://localhost:3000"]').strip()
 try:
-    import json
-    allowed_origins = json.loads(allowed_origins_str)
-except (json.JSONDecodeError, ValueError):
-    # Fallback to default if parsing fails
+    _parsed = json.loads(_allowed_origins_raw)
+    if not isinstance(_parsed, list):
+        _parsed = [_allowed_origins_raw] if _allowed_origins_raw else ["http://localhost:3000"]
+    allowed_origins = [_normalize_origin(o) for o in _parsed if o and isinstance(o, str)]
+except (json.JSONDecodeError, ValueError, TypeError):
+    allowed_origins = [_normalize_origin(o) for o in _allowed_origins_raw.split(",") if o.strip()]
+if not allowed_origins:
     allowed_origins = ["http://localhost:3000"]
 
+# CORSMiddleware needs exact origins; we pass normalized list (browser sends no trailing slash)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+
+class EnsureCORSHeadersMiddleware(BaseHTTPMiddleware):
+    """Ensure CORS headers on every response (including 5xx). Match origin with trailing slash normalized."""
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        origin = request.headers.get("origin")
+        if origin and _normalize_origin(origin) in allowed_origins:
+            response.headers.setdefault("Access-Control-Allow-Origin", origin)
+            response.headers.setdefault("Access-Control-Allow-Credentials", "true")
+        return response
+
+
+app.add_middleware(EnsureCORSHeadersMiddleware)
 
 # Include routers
 app.include_router(auth.router)

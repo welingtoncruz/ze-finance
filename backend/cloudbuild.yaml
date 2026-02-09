@@ -1,0 +1,50 @@
+# Cloud Build: build backend image, push to Artifact Registry, deploy to Cloud Run.
+# From repo root (full repo as source, build step uses dir: backend):
+#   gcloud builds submit --config backend/cloudbuild.yaml .
+# Substitution vars (optional): _SERVICE_NAME (default zefa-api), _REGION (default us-east1)
+
+substitutions:
+  _SERVICE_NAME: zefa-api
+  _REGION: us-east1
+  _IMAGE_NAME: zefa-api
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: build
+    args:
+      - build
+      - -t
+      - us-east1-docker.pkg.dev/${PROJECT_ID}/zefa-backend/${_IMAGE_NAME}:${SHORT_SHA}
+      - -t
+      - us-east1-docker.pkg.dev/${PROJECT_ID}/zefa-backend/${_IMAGE_NAME}:latest
+      - .
+    dir: backend
+
+  - name: gcr.io/cloud-builders/docker
+    id: push
+    args:
+      - push
+      - us-east1-docker.pkg.dev/${PROJECT_ID}/zefa-backend/${_IMAGE_NAME}:${SHORT_SHA}
+    waitFor: [build]
+
+  - name: gcr.io/cloud-builders/docker
+    id: push-latest
+    args:
+      - push
+      - us-east1-docker.pkg.dev/${PROJECT_ID}/zefa-backend/${_IMAGE_NAME}:latest
+    waitFor: [build]
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_NAME}
+      - --image=us-east1-docker.pkg.dev/${PROJECT_ID}/zefa-backend/${_IMAGE_NAME}:${SHORT_SHA}
+      - --region=${_REGION}
+      - --platform=managed
+    waitFor: [push]
+
+options:
+  logging: CLOUD_LOGGING_ONLY

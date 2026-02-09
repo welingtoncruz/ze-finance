@@ -1,0 +1,22 @@
+# Local env and secrets (Cloud Run injects via Secret Manager)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__
+*.py[cod]
+*.pyo
+.venv
+venv
+*.egg-info
+.pytest_cache
+.coverage
+htmlcov
+
+# Git and IDE
+.git
+.gitignore
+.agents
+*.md
+!README.md
