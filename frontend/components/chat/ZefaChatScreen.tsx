@@ -329,9 +329,60 @@ export function ZefaChatScreen() {
   )
 
   return (
-    <div className="flex h-[100dvh] flex-col bg-background theme-transition overflow-hidden">
-      {/* Header */}
-      <header className="sticky top-4 z-10 border-b border-border bg-card/95 backdrop-blur-xl pt-4 pb-3 px-3 safe-area-top sm:pt-6 sm:pb-4 sm:px-4">
+    <div className="flex h-full min-h-0 flex-col bg-background theme-transition overflow-hidden">
+      {/* Mobile Header - gradient, matches Dashboard/Insights/Transactions */}
+      <header className="sticky top-0 z-10 gradient-header px-3 py-4 sm:px-6 sm:py-5 safe-area-top lg:hidden">
+        {isSearchOpen ? (
+          <div className="mx-auto flex max-w-2xl lg:max-w-4xl items-center">
+            <ChatSearchBar
+              query={searchQuery}
+              setQuery={setSearchQuery}
+              matchCount={searchResults.length}
+              activeIndex={activeMatchIndex}
+              onNext={handleSearchNext}
+              onPrev={handleSearchPrev}
+              onClose={handleSearchClose}
+              isMobile={true}
+              variant="header"
+            />
+          </div>
+        ) : (
+          <div className="mx-auto flex max-w-2xl lg:max-w-4xl items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.back()}
+                className="rounded-xl p-2.5 transition-all hover:bg-primary-foreground/10 active:scale-95"
+                aria-label="Voltar"
+              >
+                <ArrowLeft className="h-5 w-5 text-primary-foreground" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/15 shadow-lg">
+                  <Sparkles className="h-5 w-5 text-primary-foreground" />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-success ring-2 ring-background" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-primary-foreground">Zefa</h1>
+                  <p className="text-xs text-primary-foreground/70">Online</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsSearchOpen(true)}
+                className="rounded-xl p-2.5 transition-all hover:bg-primary-foreground/10 active:scale-95"
+                aria-label="Buscar mensagens"
+              >
+                <Search className="h-5 w-5 text-primary-foreground" />
+              </button>
+              <ThemeToggle variant="header" />
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Desktop Header - unchanged from original */}
+      <header className="hidden lg:block sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border/50 pt-4 pb-3 px-4 sm:pt-6 sm:pb-4 sm:px-6">
         {isSearchOpen ? (
           <div className="mx-auto flex max-w-2xl lg:max-w-4xl items-center">
             <ChatSearchBar
@@ -348,13 +399,6 @@ export function ZefaChatScreen() {
         ) : (
           <div className="mx-auto flex max-w-2xl lg:max-w-4xl items-center justify-between">
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.back()}
-                className="lg:hidden rounded-xl p-2.5 transition-all hover:bg-muted active:scale-95"
-                aria-label="Voltar"
-              >
-                <ArrowLeft className="h-5 w-5 text-foreground" />
-              </button>
               <div className="flex items-center gap-3">
                 <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-lg">
                   <Sparkles className="h-5 w-5 text-primary-foreground" />
