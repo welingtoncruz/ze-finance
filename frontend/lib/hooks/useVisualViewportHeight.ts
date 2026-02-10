@@ -17,7 +17,7 @@ export function useVisualViewportHeight(): number | null {
     }
 
     const update = (): void => {
-      setHeight(vv.height)
+      if (vv) setHeight(vv.height)
     }
 
     update()

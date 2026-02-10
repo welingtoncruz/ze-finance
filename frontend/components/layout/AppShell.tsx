@@ -70,9 +70,14 @@ export function AppShell({ children, userProfile }: AppShellProps) {
       <main
         className={`transition-all duration-300 ${
           isChatRoute
-            ? "h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden"
+            ? "min-h-0 overflow-hidden"
             : "min-h-screen"
         } ${!hideDesktopNavigation ? "lg:ml-72" : ""}`}
+        style={
+          isChatRoute
+            ? { height: "var(--chat-viewport-height, 100dvh)", maxHeight: "var(--chat-viewport-height, 100dvh)" }
+            : undefined
+        }
       >
         {/* Content Container - no lateral padding (headers full-width like bottom nav); screens add px to content only */}
         <div
