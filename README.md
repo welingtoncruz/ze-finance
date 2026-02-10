@@ -185,6 +185,4 @@ docker compose logs -f db
 
 ## Production deployment
 
-For production, the app is deployed with **Vercel** (frontend), **Neon** (PostgreSQL), and **GCP Cloud Run** (FastAPI backend). See the full guide:
-
-- **[Production Deployment: Vercel + Neon + GCP Cloud Run](ai-specs/changes/deploy-production-vercel-neon-gcp-plan.md)**
+For production, the app is deployed with **Vercel** (frontend), **Neon** (PostgreSQL), and **GCP Cloud Run** (FastAPI backend).
