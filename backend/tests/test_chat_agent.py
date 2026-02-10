@@ -8,7 +8,9 @@ import pytest
 import respx
 from httpx import AsyncClient, Response
 
-# Note: We use the /chat/api-key endpoint to set API keys in tests
+# Note: We use the /chat/api-key endpoint to set API keys in tests.
+# API keys must match schema: min 20 chars, start with sk-, sk-ant-, or sk-proj-
+TEST_API_KEY = "sk-test-key-for-testing-only-12345"
 # OpenAI client may send method as bytes (b"POST"); respx.post() matches str "POST" only.
 # Use respx.route(method__in=["POST", b"POST"], url=...) so mocks match in all environments.
 
@@ -49,7 +51,7 @@ async def test_chat_message_with_balance_query(async_client: AsyncClient, test_u
     # Arrange - Set ephemeral API key via endpoint
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key"},
+        json={"api_key": TEST_API_KEY},
         headers=test_user["headers"],
     )
     
@@ -163,12 +165,12 @@ async def test_chat_message_isolation(async_client: AsyncClient) -> None:
     # For testing, we'll set keys directly via the endpoint
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key-a"},
+        json={"api_key": "sk-test-key-a-for-testing-12345"},
         headers=headers_a,
     )
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key-b"},
+        json={"api_key": "sk-test-key-b-for-testing-12345"},
         headers=headers_b,
     )
     
@@ -233,7 +235,7 @@ async def test_chat_message_create_transaction(async_client: AsyncClient, test_u
     # Arrange - Set ephemeral API key via endpoint
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key"},
+        json={"api_key": TEST_API_KEY},
         headers=test_user["headers"],
     )
     
@@ -342,7 +344,7 @@ async def test_chat_message_provider_error(async_client: AsyncClient, test_user:
     # Arrange - Set ephemeral API key via endpoint
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key"},
+        json={"api_key": TEST_API_KEY},
         headers=test_user["headers"],
     )
     
@@ -377,7 +379,7 @@ async def test_chat_message_provider_error(async_client: AsyncClient, test_user:
 async def test_set_ephemeral_api_key(async_client: AsyncClient, test_user: dict) -> None:
     """Test setting ephemeral API key via endpoint."""
     # Arrange
-    api_key = "test-ephemeral-key-12345"
+    api_key = "sk-test-ephemeral-key-12345"
     
     # Act
     response = await async_client.post(
@@ -439,7 +441,7 @@ async def test_context_limit_wired(async_client: AsyncClient, test_user: dict, m
     # Set ephemeral API key
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key"},
+        json={"api_key": TEST_API_KEY},
         headers=test_user["headers"],
     )
     
@@ -492,7 +494,7 @@ async def test_output_token_caps(async_client: AsyncClient, test_user: dict, mon
     # Set ephemeral API key
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key"},
+        json={"api_key": TEST_API_KEY},
         headers=test_user["headers"],
     )
     
@@ -554,7 +556,7 @@ async def test_tools_gating_heuristic(async_client: AsyncClient, test_user: dict
     # Set ephemeral API key
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key"},
+        json={"api_key": TEST_API_KEY},
         headers=test_user["headers"],
     )
     
@@ -637,7 +639,7 @@ async def test_tools_mode_always(async_client: AsyncClient, test_user: dict, mon
     # Set ephemeral API key
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key"},
+        json={"api_key": TEST_API_KEY},
         headers=test_user["headers"],
     )
     
@@ -699,7 +701,7 @@ async def test_tools_mode_never(async_client: AsyncClient, test_user: dict, monk
     # Set ephemeral API key
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key"},
+        json={"api_key": TEST_API_KEY},
         headers=test_user["headers"],
     )
     
@@ -767,7 +769,7 @@ async def test_chat_message_update_transaction(async_client: AsyncClient, test_u
     # Set ephemeral API key
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key"},
+        json={"api_key": TEST_API_KEY},
         headers=test_user["headers"],
     )
     
@@ -885,7 +887,7 @@ async def test_chat_message_delete_transaction(async_client: AsyncClient, test_u
     # Set ephemeral API key
     await async_client.post(
         "/chat/api-key",
-        json={"api_key": "test-api-key"},
+        json={"api_key": TEST_API_KEY},
         headers=test_user["headers"],
     )
     

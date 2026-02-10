@@ -1,7 +1,8 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, Wallet, Flame, ChevronRight, ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { TrendingUp, TrendingDown, Wallet, ChevronRight, Settings } from "lucide-react"
 import {
   AreaChart,
   Area,
@@ -11,9 +12,8 @@ import {
   Tooltip,
 } from "recharts"
 import type { Transaction, UserProfile } from "@/lib/types"
-import type { ApiDashboardSummary, ApiCategoryMetric } from "@/lib/types/api"
+import type { ApiDashboardSummary } from "@/lib/types/api"
 import { TransactionItem } from "../transactions/TransactionItem"
-import { SkeletonLoader } from "../loading/SkeletonLoader"
 import { EmptyState } from "../empty/EmptyState"
 import { ThemeToggle } from "../theme-toggle"
 import { InsightsCard } from "./InsightsCard"
@@ -32,6 +32,9 @@ export function DashboardScreen({
   dashboardSummary,
   onViewHistory,
 }: DashboardScreenProps) {
+  const router = useRouter()
+  const thisMonth = new Date().toISOString().slice(0, 7)
+
   // Use backend summary if available, otherwise compute from transactions
   const totalIncome = dashboardSummary
     ? Number(dashboardSummary.total_income)
@@ -49,7 +52,6 @@ export function DashboardScreen({
     ? Number(dashboardSummary.total_balance)
     : totalIncome - totalExpense
 
-  const thisMonth = new Date().toISOString().slice(0, 7)
   const monthlyExpenses = transactions
     .filter((t) => t.type === "expense" && t.date.startsWith(thisMonth))
     .reduce((sum, t) => sum + t.amount, 0)
@@ -79,7 +81,7 @@ export function DashboardScreen({
   return (
     <div className="flex min-h-screen flex-col pb-28 lg:pb-8 theme-transition bg-mesh-gradient">
       {/* Mobile Header */}
-      <header className="sticky top-0 z-10 gradient-header px-4 py-4 sm:px-6 sm:py-5 lg:hidden">
+      <header className="sticky top-0 z-10 gradient-header px-3 py-4 sm:px-6 sm:py-5 lg:hidden">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-primary-foreground/15 backdrop-blur-sm">
@@ -87,18 +89,13 @@ export function DashboardScreen({
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs text-primary-foreground/70">Bem-vindo de volta,</p>
-              <h1 className="text-base sm:text-lg font-semibold text-primary-foreground tracking-tight truncate">
+              <h1 className="text-lg font-bold text-primary-foreground tracking-tight truncate">
                 {userProfile.name}
               </h1>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {userProfile.streak > 0 && (
-              <div className="flex items-center gap-1 rounded-full bg-primary-foreground/15 px-2.5 py-1.5 backdrop-blur-sm">
-                <Flame className="h-3.5 w-3.5 text-primary-foreground" />
-                <span className="text-xs font-semibold text-primary-foreground">{userProfile.streak}</span>
-              </div>
-            )}
+            {/* Streak pill hidden until backend-driven implementation is available */}
             <ThemeToggle variant="header" />
           </div>
         </div>
@@ -114,17 +111,19 @@ export function DashboardScreen({
             </h1>
           </div>
           <div className="flex items-center gap-4 shrink-0">
-            {userProfile.streak > 0 && (
-              <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2">
-                <Flame className="h-5 w-5 text-primary" />
-                <span className="text-sm font-semibold text-primary">{userProfile.streak} dias de sequência</span>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => router.push("/settings")}
+              className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              <span>Editar perfil</span>
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 p-4 sm:p-5 lg:p-8">
+      <div className="flex-1 py-4 px-3 sm:p-5 lg:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Hero Balance Section */}
           <Card className="glass-card overflow-hidden border-0 shadow-xl hover-lift">

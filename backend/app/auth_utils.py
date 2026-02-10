@@ -1,8 +1,10 @@
 """
-Authentication utilities: JWT token creation and password hashing.
+Authentication utilities: JWT token creation, refresh token helpers, and password hashing.
 """
+import hashlib
 import os
-from datetime import datetime, timedelta
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -28,9 +30,28 @@ pwd_context = CryptContext(
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # JWT configuration from environment
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+_SECRET_KEY_DEFAULT = "dev-secret-key-change-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY", _SECRET_KEY_DEFAULT)
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
+
+
+def _validate_secret_key() -> None:
+    """Fail fast if SECRET_KEY is default in production (JWT forgery risk)."""
+    env = os.getenv("ENVIRONMENT", "development")
+    if env == "production" and SECRET_KEY == _SECRET_KEY_DEFAULT:
+        raise RuntimeError(
+            "SECRET_KEY must be set to a secure value in production. "
+            "Do not use the default dev-secret-key-change-in-production."
+        )
+
+
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+
+# Refresh token configuration from environment
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+REFRESH_TOKEN_EXPIRE_DAYS_REMEMBER_ME = int(
+    os.getenv("REFRESH_TOKEN_EXPIRE_DAYS_REMEMBER_ME", "30")
+)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -72,16 +93,54 @@ def create_access_token(user_id: UUID, expires_delta: Optional[timedelta] = None
         The encoded JWT token string
     """
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
     to_encode = {
         "sub": str(user_id),
         "exp": expire,
+        "nonce": secrets.token_urlsafe(8),
     }
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+
+def create_refresh_token() -> str:
+    """
+    Create a new opaque refresh token string.
+    
+    Returns:
+        A URL-safe random token string
+    """
+    return secrets.token_urlsafe(64)
+
+
+def hash_refresh_token(raw_token: str) -> str:
+    """
+    Hash a refresh token using a deterministic one-way hash.
+    
+    Args:
+        raw_token: The plain text refresh token
+        
+    Returns:
+        Hex-encoded SHA-256 hash of the token
+    """
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
+def get_refresh_token_expiry(remember_me: bool) -> datetime:
+    """
+    Compute the expiration datetime for a refresh token.
+    
+    Args:
+        remember_me: Whether the user selected the 'remember me' option
+        
+    Returns:
+        Datetime when the refresh token should expire
+    """
+    days = REFRESH_TOKEN_EXPIRE_DAYS_REMEMBER_ME if remember_me else REFRESH_TOKEN_EXPIRE_DAYS
+    return datetime.now(timezone.utc) + timedelta(days=days)
 
 
 async def get_current_user(

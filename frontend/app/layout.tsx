@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/AuthContext"
+import { AddToHomeScreenBanner } from "@/components/pwa/AddToHomeScreenBanner"
 import './globals.css'
 
 const inter = Inter({ 
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
   title: 'Ze Finance (Zefa) - Personal Finance Manager',
   description: 'Manage your personal finances with ease',
   generator: 'v0.app',
+  manifest: '/manifest.json',
   icons: {
     icon: [
       {
@@ -51,6 +53,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 }
 
 export default function RootLayout({
@@ -64,6 +67,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             {children}
+            <AddToHomeScreenBanner />
             <Toaster position="top-center" richColors />
           </AuthProvider>
         </ThemeProvider>

@@ -8,6 +8,7 @@ This repository contains the **technical specs and Cursor workflow framework** f
 - **Development guide**: `ai-specs/specs/development_guide.md`
 - **API contract (OpenAPI)**: `ai-specs/specs/api-spec.yml`
 - **Data model**: `ai-specs/specs/data-model.md`
+- **Production deployment (Vercel + Neon + GCP Cloud Run)**: `ai-specs/changes/deploy-production-vercel-neon-gcp-plan.md`
 
 ## Cursor workflow (commands in chat)
 
@@ -181,3 +182,9 @@ docker compose up -d db
 ```bash
 docker compose logs -f db
 ```
+
+## Production deployment
+
+For production, the app is deployed with **Vercel** (frontend), **Neon** (PostgreSQL), and **GCP Cloud Run** (FastAPI backend). See the full guide:
+
+- **[Production Deployment: Vercel + Neon + GCP Cloud Run](ai-specs/changes/deploy-production-vercel-neon-gcp-plan.md)**

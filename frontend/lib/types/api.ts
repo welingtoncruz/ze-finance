@@ -2,7 +2,7 @@
  * API types and mappers for backend integration.
  * Maps between backend API shapes and frontend UI types.
  */
-import type { Transaction, TransactionType } from "../types"
+import type { Transaction, TransactionType, UserProfile } from "../types"
 
 // Backend API DTOs
 export interface ApiToken {
@@ -51,6 +51,18 @@ export interface ApiDashboardSummary {
   total_income: number
   total_expense: number
   by_category: ApiCategoryMetric[]
+}
+
+export interface ApiUserProfileResponse {
+  id: string
+  email: string
+  full_name: string | null
+  monthly_budget: number
+}
+
+export interface ApiUserProfileUpdate {
+  full_name?: string | null
+  monthly_budget?: number
 }
 
 // Chat API Types
@@ -175,4 +187,23 @@ export function mapUiTransactionToApiUpdate(
   }
   
   return update
+}
+
+export function mapApiUserProfileToUi(apiProfile: ApiUserProfileResponse): UserProfile {
+  return {
+    id: apiProfile.id,
+    name: apiProfile.full_name || "User",
+    monthlyBudget: Number(apiProfile.monthly_budget),
+    // Keep frontend-only fields with sensible defaults for now
+    savingsGoal: 10000,
+    streak: 0,
+    totalSaved: 0,
+  }
+}
+
+export function mapUiUserProfileToApi(profile: UserProfile): ApiUserProfileUpdate {
+  return {
+    full_name: profile.name || null,
+    monthly_budget: profile.monthlyBudget,
+  }
 }

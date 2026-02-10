@@ -9,7 +9,7 @@ vi.mock("@/lib/chat/service", () => ({
   sendChatMessage: vi.fn(),
 }))
 
-// Mock localStorage
+// Mock localStorage (implements Storage interface including key/length for clearAllZefaStorage)
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
 
@@ -23,6 +23,13 @@ const localStorageMock = (() => {
     },
     clear: () => {
       store = {}
+    },
+    get length() {
+      return Object.keys(store).length
+    },
+    key: (index: number) => {
+      const keys = Object.keys(store)
+      return keys[index] ?? null
     },
   }
 })()
@@ -211,7 +218,7 @@ describe("useChat Hook", () => {
     })
 
     await waitFor(() => {
-      const stored = localStorageMock.getItem("zefa_chat_v1:default")
+      const stored = localStorageMock.getItem("zefa_chat_v1:anonymous")
       expect(stored).toBeTruthy()
 
       const parsed = JSON.parse(stored!)
@@ -243,7 +250,7 @@ describe("useChat Hook", () => {
       ],
     }
 
-    localStorageMock.setItem("zefa_chat_v1:default", JSON.stringify(persistedState))
+    localStorageMock.setItem("zefa_chat_v1:anonymous", JSON.stringify(persistedState))
 
     const { result } = renderHook(() => useChat())
 
@@ -276,7 +283,7 @@ describe("useChat Hook", () => {
       ],
     }
 
-    localStorageMock.setItem("zefa_chat_v1:default", JSON.stringify(persistedState))
+    localStorageMock.setItem("zefa_chat_v1:anonymous", JSON.stringify(persistedState))
 
     const { result, unmount } = renderHook(() => useChat())
 
@@ -287,7 +294,7 @@ describe("useChat Hook", () => {
     // Unmount and check storage still has persisted data (not overwritten by initial state)
     unmount()
 
-    const stored = localStorageMock.getItem("zefa_chat_v1:default")
+    const stored = localStorageMock.getItem("zefa_chat_v1:anonymous")
     expect(stored).toBeTruthy()
     const parsed = JSON.parse(stored!)
     expect(parsed.messages).toHaveLength(2)
@@ -318,7 +325,7 @@ describe("useChat Hook", () => {
     unmount1()
 
     // Verify it's stored
-    const storedAfterFirst = localStorageMock.getItem("zefa_chat_v1:default")
+    const storedAfterFirst = localStorageMock.getItem("zefa_chat_v1:anonymous")
     expect(storedAfterFirst).toBeTruthy()
 
     // Second mount: should restore messages
@@ -394,7 +401,7 @@ describe("useChat Hook", () => {
 
     // After clearing, the welcome message is still persisted (by useEffect)
     // So we check that conversationId is null and only welcome message exists
-    const stored = localStorageMock.getItem("zefa_chat_v1:default")
+    const stored = localStorageMock.getItem("zefa_chat_v1:anonymous")
     expect(stored).toBeTruthy()
     const parsed = JSON.parse(stored!)
     expect(parsed.conversationId).toBeNull()

@@ -23,6 +23,7 @@ import {
 } from "recharts"
 import type { Transaction, UserProfile } from "@/lib/types"
 import { BudgetProgress } from "../dashboard/BudgetProgress"
+import { MonthSelector } from "../filters/MonthSelector"
 
 interface InsightsScreenProps {
   transactions: Transaction[]
@@ -32,6 +33,7 @@ interface InsightsScreenProps {
 
 export function InsightsScreen({ transactions, userProfile, isLoading: externalLoading }: InsightsScreenProps) {
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7))
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600)
@@ -40,8 +42,13 @@ export function InsightsScreen({ transactions, userProfile, isLoading: externalL
 
   const displayLoading = externalLoading || isLoading
 
-  const thisMonth = new Date().toISOString().slice(0, 7)
-  const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1))
+  const thisMonth = selectedMonth
+  const lastMonthDate = new Date(
+    Number(thisMonth.slice(0, 4)),
+    Number(thisMonth.slice(5, 7)) - 1,
+    1
+  )
+  const lastMonth = new Date(lastMonthDate.setMonth(lastMonthDate.getMonth() - 1))
     .toISOString()
     .slice(0, 7)
 
@@ -103,7 +110,7 @@ export function InsightsScreen({ transactions, userProfile, isLoading: externalL
 
   if (displayLoading) {
     return (
-      <div className="flex-1 p-5 lg:p-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="flex-1 py-5 px-3 lg:p-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="h-48 rounded-2xl skeleton-shimmer" />
         ))}
@@ -113,9 +120,17 @@ export function InsightsScreen({ transactions, userProfile, isLoading: externalL
 
   return (
     <div className="flex min-h-screen flex-col pb-28 lg:pb-8 theme-transition">
-      <div className="flex-1 p-5 lg:p-8 animate-slide-up">
+      <div className="flex-1 py-5 px-3 lg:p-8 animate-slide-up">
         {/* Monthly Overview - Responsive Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        <div className="flex flex-col gap-4 mb-6 lg:mb-8">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Resumo mensal
+            </h2>
+            <MonthSelector selectedMonth={selectedMonth} onChange={setSelectedMonth} />
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           <Card className="glass-card border-0 hover-lift stat-card">
             <CardContent className="p-4 lg:p-5">
               <div className="flex items-center gap-2 text-accent-foreground">
@@ -183,6 +198,7 @@ export function InsightsScreen({ transactions, userProfile, isLoading: externalL
               <p className="mt-1 text-xs text-muted-foreground">da meta</p>
             </CardContent>
           </Card>
+          </div>
         </div>
 
         {/* Main Content Grid */}
@@ -208,13 +224,13 @@ export function InsightsScreen({ transactions, userProfile, isLoading: externalL
           <Card className="glass-card border-0 hover-lift">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold text-muted-foreground">
-                Tendência 6 Meses
+                Saldo diário no mês
               </CardTitle>
             </CardHeader>
             <CardContent className="pb-4">
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyTrend}>
+                  <AreaChart data={generateDailyBalanceData(transactions, selectedMonth)}>
                     <defs>
                       <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.3} />
@@ -226,7 +242,7 @@ export function InsightsScreen({ transactions, userProfile, isLoading: externalL
                       </linearGradient>
                     </defs>
                     <XAxis
-                      dataKey="month"
+                      dataKey="day"
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
@@ -243,19 +259,11 @@ export function InsightsScreen({ transactions, userProfile, isLoading: externalL
                     />
                     <Area
                       type="monotone"
-                      dataKey="income"
+                      dataKey="balance"
                       stroke="var(--color-accent)"
                       strokeWidth={2}
                       fill="url(#incomeGradient)"
-                      name="Receita"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="expense"
-                      stroke="var(--color-destructive)"
-                      strokeWidth={2}
-                      fill="url(#expenseGradient)"
-                      name="Despesas"
+                      name="Saldo acumulado"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -263,11 +271,7 @@ export function InsightsScreen({ transactions, userProfile, isLoading: externalL
               <div className="mt-4 flex items-center justify-center gap-6">
                 <div className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full bg-accent" />
-                  <span className="text-xs text-muted-foreground">Receita</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-destructive" />
-                  <span className="text-xs text-muted-foreground">Despesas</span>
+                  <span className="text-xs text-muted-foreground">Saldo acumulado</span>
                 </div>
               </div>
             </CardContent>
@@ -383,4 +387,38 @@ function generateMonthlyTrend(transactions: Transaction[]) {
   }
 
   return months
+}
+
+function generateDailyBalanceData(transactions: Transaction[], month: string) {
+  const [yearStr, monthStr] = month.split("-")
+  const year = Number(yearStr)
+  const monthIndex = Number(monthStr) - 1
+
+  const startDate = new Date(year, monthIndex, 1)
+  const endDate = new Date(year, monthIndex + 1, 0)
+
+  const dates: { day: string; balance: number }[] = []
+  let runningBalance = 0
+
+  for (let day = 1; day <= endDate.getDate(); day++) {
+    const date = new Date(year, monthIndex, day)
+    const dateStr = date.toISOString().split("T")[0]
+
+    const dayIncome = transactions
+      .filter((t) => t.type === "income" && t.date === dateStr)
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    const dayExpense = transactions
+      .filter((t) => t.type === "expense" && t.date === dateStr)
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    runningBalance += dayIncome - dayExpense
+
+    dates.push({
+      day: String(day),
+      balance: runningBalance,
+    })
+  }
+
+  return dates
 }

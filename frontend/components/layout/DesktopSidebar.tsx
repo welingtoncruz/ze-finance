@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Plus,
   Sparkles,
+  Settings,
 } from "lucide-react"
 import type { UserProfile } from "@/lib/types"
 import { ThemeToggle } from "../theme-toggle"
@@ -36,6 +37,7 @@ export function DesktopSidebar({
     { route: "/chat", icon: Sparkles, label: "Zefa" },
     { route: "/insights", icon: BarChart3, label: "Análises" },
     { route: "/transactions", icon: Receipt, label: "Transações" },
+    { route: "/settings", icon: Settings, label: "Configurações" },
   ]
 
   const handleAddTransaction = () => {
@@ -84,10 +86,7 @@ export function DesktopSidebar({
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-foreground truncate">{userProfile.name}</p>
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="h-3 w-3 text-accent" />
-                <span className="text-xs text-muted-foreground">{userProfile.streak} dias de sequência</span>
-              </div>
+              {/* Streak UI hidden until backend implementation is available */}
             </div>
           </div>
         </div>

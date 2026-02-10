@@ -6,6 +6,7 @@ import { RefreshCcw, AlertTriangle } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeRaw from "rehype-raw"
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import { Button } from "@/components/ui/button"
 import { highlightSearchTerms } from "@/lib/markdown/remarkHighlightSearch"
 import type { ChatMessage } from "@/lib/types"
@@ -28,20 +29,34 @@ export const ChatBubble = memo(function ChatBubble({
   const isError = message.status === "error"
   const isSending = message.status === "sending"
 
+  // Normalize content: collapse 3+ newlines to 2 to avoid "double enter" gaps from empty paragraphs
+  const normalizedContent = (message.content ?? "").replace(/\n{3,}/g, "\n\n")
+
   // Highlight search terms in content if this is the active match
   const contentToRender =
-    isActiveMatch && searchQuery && message.content
-      ? highlightSearchTerms(message.content, searchQuery)
-      : message.content
+    isActiveMatch && searchQuery && normalizedContent
+      ? highlightSearchTerms(normalizedContent, searchQuery)
+      : normalizedContent
 
-  // Component mapping for react-markdown to match bubble styling
+  // Sanitize schema: allow only <mark data-search-highlight="true"> from raw HTML (search highlights).
+  // All other raw HTML is stripped; prevents XSS from user/AI content.
+  const sanitizeSchema = {
+    ...defaultSchema,
+    tagNames: [...(defaultSchema.tagNames ?? []), "mark"],
+    attributes: {
+      ...defaultSchema.attributes,
+      mark: [["dataSearchHighlight", "true"]],
+    },
+  }
+
+  // Component mapping for react-markdown to match bubble styling (compact spacing)
   const markdownComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
-    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+    p: ({ children }) => <p className="my-0">{children}</p>,
     strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
     em: ({ children }) => <em className="italic">{children}</em>,
-    ul: ({ children }) => <ul className="mb-2 ml-4 list-disc space-y-1 last:mb-0">{children}</ul>,
-    ol: ({ children }) => <ol className="mb-2 ml-4 list-decimal space-y-1 last:mb-0">{children}</ol>,
-    li: ({ children }) => <li className="ml-2">{children}</li>,
+    ul: ({ children }) => <ul className="ml-4 list-disc space-y-0">{children}</ul>,
+    ol: ({ children }) => <ol className="ml-4 list-decimal space-y-0">{children}</ol>,
+    li: ({ children }) => <li className="ml-2 leading-tight [&>p]:my-0 [&+li]:mt-0.5">{children}</li>,
     a: ({ href, children }) => (
       <a
         href={href}
@@ -66,16 +81,19 @@ export const ChatBubble = memo(function ChatBubble({
       )
     },
     pre: ({ children }) => (
-      <pre className="mb-2 last:mb-0 overflow-x-auto rounded bg-muted/50 p-2">
+      <pre className="overflow-x-auto rounded bg-muted/50 p-2">
         {children}
       </pre>
     ),
     // Handle HTML mark tags for search highlighting
     mark: ({ children, ...props }: React.ComponentPropsWithoutRef<"mark">) => {
       // Check if this is a search highlight by examining the node prop (set by rehype-raw)
-      const node = (props as any).node
-      const isSearchHighlight = node?.properties?.["data-search-highlight"] === "true" || 
-                                 node?.properties?.["data-search-highlight"] === true
+      const node = "node" in props && props.node && typeof props.node === "object"
+        ? (props.node as { properties?: Record<string, unknown> })
+        : undefined
+      const isSearchHighlight =
+        node?.properties?.["data-search-highlight"] === "true" ||
+        node?.properties?.["data-search-highlight"] === true
       if (isSearchHighlight) {
         return (
           <mark className="bg-yellow-400/80 text-foreground rounded px-0.5 font-medium">
@@ -92,17 +110,17 @@ export const ChatBubble = memo(function ChatBubble({
       className={`chat-message flex ${isUser ? "justify-end" : "justify-start"}`}
     >
       <div
-        className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+        className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[65%] rounded-2xl px-4 py-3 ${
           isUser
             ? "bg-primary text-primary-foreground rounded-br-md"
             : "bg-muted text-foreground rounded-bl-md"
         } ${isError ? "border-2 border-destructive" : ""}`}
-      >
-        <div className="text-sm leading-relaxed">
+        >
+        <div className="chat-bubble-content text-sm leading-tight whitespace-pre-wrap break-words">
           {contentToRender && (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw]}
+              rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
               components={markdownComponents}
             >
               {contentToRender}

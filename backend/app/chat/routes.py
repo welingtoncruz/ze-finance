@@ -1,11 +1,16 @@
 """
 Chat routes for Zefa Finance AI agent.
 """
+import logging
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+
+logger = logging.getLogger("zefa.chat")
+
+from app.rate_limit import limiter
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth_utils import get_current_user
@@ -17,15 +22,30 @@ from app.ai import gateway
 from app.ai.gateway import set_ephemeral_api_key, get_api_key, AI_MAX_CONTEXT_MESSAGES
 
 
+# Allowed API key prefixes (OpenAI, Anthropic, Gemini)
+_API_KEY_PREFIXES = ("sk-", "sk-ant-", "sk-proj-")
+_API_KEY_MIN_LEN = 20
+_API_KEY_MAX_LEN = 500
+
+
 class ApiKeyRequest(BaseModel):
-    """Schema for API key request."""
-    api_key: str
+    """Schema for API key request with format validation."""
+    api_key: str = Field(min_length=_API_KEY_MIN_LEN, max_length=_API_KEY_MAX_LEN)
+
+    @field_validator("api_key")
+    @classmethod
+    def validate_api_key_format(cls, v: str) -> str:
+        if not v.strip().startswith(_API_KEY_PREFIXES):
+            raise ValueError("API key must start with sk-, sk-ant-, or sk-proj-")
+        return v.strip()
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 @router.post("/messages", response_model=ChatMessageResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
 async def create_chat_message(
+    request: Request,
     payload: ChatMessageCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -136,16 +156,15 @@ async def create_chat_message(
             include_context_pack=include_context_pack,
         )
     except ValueError as e:
-        # Handle missing API key or other validation errors
+        # Handle missing API key or other validation errors in a safe, user-friendly way
         error_msg = str(e)
         if "API key" in error_msg.lower():
             assistant_response = {
                 "role": "assistant",
                 "content": (
                     "Olá! Sou o Zefa, seu assistente financeiro. "
-                    "Para que eu possa ajudá-lo, preciso de uma chave de API do provedor de IA. "
-                    "Por favor, configure a variável de ambiente OPENAI_API_KEY, ANTHROPIC_API_KEY ou GEMINI_API_KEY "
-                    "no arquivo .env do backend, ou forneça a chave temporariamente via chat. "
+                    "O serviço de IA não está configurado no momento. "
+                    "Por favor, entre em contato com o suporte ou forneça sua chave de API temporariamente via chat. "
                     "A chave fornecida via chat será armazenada apenas em memória e expirará em 60 minutos."
                 ),
                 "tool_calls": [],
@@ -153,16 +172,21 @@ async def create_chat_message(
                 "metadata": ChatAssistantMeta().model_dump(),
             }
         else:
+            # For all other AI-related validation errors, avoid leaking internal details
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"AI processing error: {error_msg}",
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="AI service is temporarily unavailable. Please try again later.",
             )
     except Exception as e:
         # Log error details for debugging
         import traceback
         error_traceback = traceback.format_exc()
-        print(f"[ERROR] Chat message processing failed: {type(e).__name__}: {e}")
-        print(f"[ERROR] Traceback:\n{error_traceback}")
+        logger.error(
+            "Chat message processing failed: %s: %s\n%s",
+            type(e).__name__,
+            e,
+            error_traceback,
+        )
         
         # Return safe message to user but log the actual error
         raise HTTPException(
@@ -177,7 +201,7 @@ async def create_chat_message(
     
     # Persist assistant message
     try:
-        print(f"[DEBUG] Persisting assistant message")
+        logger.debug("Persisting assistant message")
         assistant_message = await chat_crud.create_chat_message(
             db=db,
             user_id=user_id,
@@ -190,7 +214,7 @@ async def create_chat_message(
             content=assistant_response.get("content", ""),
             conversation_id=conversation_id,
         )
-        print(f"[DEBUG] Assistant message persisted: {assistant_message.id}")
+        logger.debug("Assistant message persisted: %s", assistant_message.id)
         
         # Trigger summarization check if needed (async, non-blocking)
         try:
@@ -201,11 +225,9 @@ async def create_chat_message(
             )
         except Exception as e:
             # Log but don't fail the request if summarization fails
-            print(f"[WARNING] Summarization check failed: {type(e).__name__}: {e}")
+            logger.warning("Summarization check failed: %s: %s", type(e).__name__, e)
     except Exception as e:
-        print(f"[ERROR] Failed to persist assistant message: {type(e).__name__}: {e}")
-        import traceback
-        print(f"[ERROR] Traceback:\n{traceback.format_exc()}")
+        logger.exception("Failed to persist assistant message: %s: %s", type(e).__name__, e)
         raise
     
     # Build response message

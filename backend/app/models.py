@@ -30,12 +30,19 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(100), nullable=True)
+    monthly_budget = Column(Numeric(10, 2), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     last_login_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     transactions = relationship(
         "Transaction",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    refresh_tokens = relationship(
+        "RefreshToken",
         back_populates="user",
         cascade="all, delete-orphan",
         lazy="selectin",
@@ -127,3 +134,32 @@ class ChatConversationSummary(Base):
 
     def __repr__(self) -> str:
         return f"<ChatConversationSummary(conversation_id={self.conversation_id}, user_id={self.user_id})>"
+
+
+class RefreshToken(Base):
+    """
+    Refresh token model representing a long-lived token used to obtain new access tokens.
+    """
+
+    __tablename__ = "refresh_tokens"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    token_hash = Column(String(255), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User", back_populates="refresh_tokens")
+
+    __table_args__ = (
+        Index("idx_refresh_tokens_user_expires", "user_id", "expires_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<RefreshToken(id={self.id}, user_id={self.user_id}, revoked_at={self.revoked_at})>"

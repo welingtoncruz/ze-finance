@@ -5,12 +5,11 @@ import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/layout/AppShell"
 import { useAuth } from "@/context/AuthContext"
 import { InsightsScreen } from "@/components/insights/InsightsScreen"
-import { ComingSoonBanner } from "@/components/feedback/ComingSoonBanner"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { BarChart3, Sparkles } from "lucide-react"
 import api from "@/lib/api"
-import type { ApiTransactionResponse } from "@/lib/types/api"
-import { mapApiTransactionToUi } from "@/lib/types/api"
+import type { ApiTransactionResponse, ApiUserProfileResponse } from "@/lib/types/api"
+import { mapApiTransactionToUi, mapApiUserProfileToUi } from "@/lib/types/api"
 import type { Transaction, UserProfile } from "@/lib/types"
 
 export default function InsightsPage() {
@@ -29,10 +28,25 @@ export default function InsightsPage() {
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true)
-      
-      // Load user profile from localStorage
+
+      const [profileRes, transactionsRes] = await Promise.all([
+        api.get<ApiUserProfileResponse>("/user/profile"),
+        api.get<ApiTransactionResponse[]>("/transactions?limit=50"),
+      ])
+
+      const mappedProfile = mapApiUserProfileToUi(profileRes.data)
+      setUserProfile(mappedProfile)
       if (typeof window !== "undefined") {
-        const savedProfile = localStorage.getItem("zefa_user_profile")
+        localStorage.setItem("zefa_profile", JSON.stringify(mappedProfile))
+      }
+
+      const mappedTransactions = transactionsRes.data.map(mapApiTransactionToUi)
+      setTransactions(mappedTransactions)
+    } catch (error) {
+      console.error("Failed to load data:", error)
+
+      if (typeof window !== "undefined") {
+        const savedProfile = localStorage.getItem("zefa_profile")
         if (savedProfile) {
           setUserProfile(JSON.parse(savedProfile))
         } else {
@@ -40,18 +54,11 @@ export default function InsightsPage() {
             name: "User",
             monthlyBudget: 5000,
             savingsGoal: 10000,
-            streak: 1,
+            streak: 0,
             totalSaved: 0,
           })
         }
       }
-
-      // Load transactions
-      const transactionsRes = await api.get<ApiTransactionResponse[]>("/transactions?limit=50")
-      const mappedTransactions = transactionsRes.data.map(mapApiTransactionToUi)
-      setTransactions(mappedTransactions)
-    } catch (error) {
-      console.error("Failed to load data:", error)
     } finally {
       setIsLoading(false)
     }
@@ -78,7 +85,7 @@ export default function InsightsPage() {
     name: "User",
     monthlyBudget: 5000,
     savingsGoal: 10000,
-    streak: 1,
+    streak: 0,
     totalSaved: 0,
   }
 
@@ -86,14 +93,14 @@ export default function InsightsPage() {
     <AppShell userProfile={defaultProfile}>
       <div className="flex min-h-screen flex-col pb-28 lg:pb-8 theme-transition bg-mesh-gradient">
         {/* Mobile Header */}
-        <header className="sticky top-0 z-10 gradient-header px-4 py-4 sm:px-6 sm:py-5 lg:hidden">
+        <header className="sticky top-0 z-10 gradient-header px-3 py-4 sm:px-6 sm:py-5 lg:hidden">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-primary-foreground/15 backdrop-blur-sm">
                 <BarChart3 className="h-5 w-5 text-primary-foreground" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-base sm:text-lg font-semibold text-primary-foreground tracking-tight truncate">
+                <h1 className="text-lg font-bold text-primary-foreground tracking-tight truncate">
                   Insights
                 </h1>
               </div>
@@ -116,13 +123,6 @@ export default function InsightsPage() {
           </div>
         </header>
         
-        {/* Coming Soon Banner - Below header (mobile and desktop) */}
-        <div className="px-4 pt-4 lg:px-8 lg:pt-6">
-          <div className="max-w-7xl mx-auto">
-            <ComingSoonBanner icon="info" />
-          </div>
-        </div>
-
         <InsightsScreen 
           transactions={transactions} 
           userProfile={defaultProfile}

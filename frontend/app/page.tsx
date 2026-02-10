@@ -6,8 +6,8 @@ import { AppShell } from "@/components/layout/AppShell"
 import { DashboardScreen } from "@/components/dashboard/DashboardScreen"
 import { useAuth } from "@/context/AuthContext"
 import api from "@/lib/api"
-import type { ApiDashboardSummary, ApiTransactionResponse } from "@/lib/types/api"
-import { mapApiTransactionToUi } from "@/lib/types/api"
+import type { ApiDashboardSummary, ApiTransactionResponse, ApiUserProfileResponse } from "@/lib/types/api"
+import { mapApiTransactionToUi, mapApiUserProfileToUi } from "@/lib/types/api"
 import type { Transaction, UserProfile } from "@/lib/types"
 
 export default function HomePage() {
@@ -27,33 +27,41 @@ export default function HomePage() {
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true)
-      
-      // Load user profile from localStorage (frontend-only for MVP)
-      const savedProfile = localStorage.getItem("zefa_profile")
-      if (savedProfile) {
-        setUserProfile(JSON.parse(savedProfile))
-      } else {
-        // Default profile
-        setUserProfile({
-          name: "User",
-          monthlyBudget: 5000,
-          savingsGoal: 10000,
-          streak: 1,
-          totalSaved: 0,
-        })
-      }
 
-      // Fetch transactions and dashboard summary in parallel
-      const [transactionsRes, summaryRes] = await Promise.all([
+      // Fetch profile, transactions and dashboard summary in parallel
+      const [profileRes, transactionsRes, summaryRes] = await Promise.all([
+        api.get<ApiUserProfileResponse>("/user/profile"),
         api.get<ApiTransactionResponse[]>("/transactions?limit=50"),
         api.get<ApiDashboardSummary>("/dashboard/summary"),
       ])
+
+      const mappedProfile = mapApiUserProfileToUi(profileRes.data)
+      setUserProfile(mappedProfile)
+      if (typeof window !== "undefined") {
+        localStorage.setItem("zefa_profile", JSON.stringify(mappedProfile))
+      }
 
       const mappedTransactions = transactionsRes.data.map(mapApiTransactionToUi)
       setTransactions(mappedTransactions)
       setDashboardSummary(summaryRes.data)
     } catch (error) {
       console.error("Failed to load data:", error)
+
+      // Fallback: try to load profile from localStorage if API fails
+      if (typeof window !== "undefined") {
+        const savedProfile = localStorage.getItem("zefa_profile")
+        if (savedProfile) {
+          setUserProfile(JSON.parse(savedProfile))
+        } else {
+          setUserProfile({
+            name: "User",
+            monthlyBudget: 5000,
+            savingsGoal: 10000,
+            streak: 0,
+            totalSaved: 0,
+          })
+        }
+      }
     } finally {
       setIsLoading(false)
     }

@@ -29,13 +29,18 @@ frontend/
 │   ├── register/          # Register Feature
 │   ├── chat/              # Chat (Zefa) Feature
 │   ├── transactions/      # Transactions list & form
+│   ├── insights/          # Insights page
+│   ├── settings/          # User settings page
 │   └── globals.css        # Tailwind directives + CSS variables (tokens)
 ├── components/
 │   ├── ui/                # Shadcn primitives (Button, Card, Input...)
 │   ├── layout/            # Header/sidebar/bottom-nav/page scaffolds
 │   ├── dashboard/         # Dashboard widgets
 │   ├── chat/              # Zefa chat (ZefaChatScreen, ChatBubble, search, etc.)
-│   └── transactions/      # Transaction form, list, category picker
+│   ├── transactions/      # Transaction form, list, category picker
+│   ├── settings/          # UserSettingsForm (profile editing)
+│   ├── filters/           # MonthSelector, date filters
+│   └── pwa/               # AddToHomeScreenBanner
 ├── lib/
 │   ├── api.ts             # Axios instance & interceptors
 │   ├── utils.ts           # Helpers (cn, format currency)

@@ -15,6 +15,7 @@ import {
   Lightbulb,
   Plus,
   Search,
+  ChevronDown,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useChat } from "@/lib/hooks/useChat"
@@ -61,7 +62,9 @@ export function ZefaChatScreen() {
   const [inputValue, setInputValue] = useState("")
   const [isInputFocused, setIsInputFocused] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [isAtBottom, setIsAtBottom] = useState(true)
 
   // Search state
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -92,17 +95,27 @@ export function ZefaChatScreen() {
     const hasNewMessage = messages.length > previousMessagesLengthRef.current
     previousMessagesLengthRef.current = messages.length
 
-    if (hasNewMessage && hasInitialScrolledRef.current) {
+    if (hasNewMessage && hasInitialScrolledRef.current && isAtBottom) {
       scrollToBottom("smooth")
     }
-  }, [messages.length, scrollToBottom])
+  }, [messages.length, scrollToBottom, isAtBottom])
 
   // Auto-scroll when assistant is typing
   useEffect(() => {
-    if (isAssistantTyping) {
+    if (isAssistantTyping && isAtBottom) {
       scrollToBottom("smooth")
     }
-  }, [isAssistantTyping, scrollToBottom])
+  }, [isAssistantTyping, scrollToBottom, isAtBottom])
+
+  const handleMessagesScroll = useCallback(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const threshold = 80
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    const isNearBottom = distanceFromBottom <= threshold
+    setIsAtBottom(isNearBottom)
+  }, [])
 
   const handleSubmit = useCallback(async (e?: React.FormEvent) => {
     if (e) {
@@ -316,26 +329,28 @@ export function ZefaChatScreen() {
   )
 
   return (
-    <div className="flex h-full flex-col bg-background theme-transition">
+    <div className="flex h-[100dvh] flex-col bg-background theme-transition overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur-xl px-4 py-4 safe-area-top">
+      <header className="sticky top-4 z-10 border-b border-border bg-card/95 backdrop-blur-xl pt-4 pb-3 px-3 safe-area-top sm:pt-6 sm:pb-4 sm:px-4">
         {isSearchOpen ? (
-          <ChatSearchBar
-            query={searchQuery}
-            setQuery={setSearchQuery}
-            matchCount={searchResults.length}
-            activeIndex={activeMatchIndex}
-            onNext={handleSearchNext}
-            onPrev={handleSearchPrev}
-            onClose={handleSearchClose}
-            isMobile={false}
-          />
+          <div className="mx-auto flex max-w-2xl lg:max-w-4xl items-center">
+            <ChatSearchBar
+              query={searchQuery}
+              setQuery={setSearchQuery}
+              matchCount={searchResults.length}
+              activeIndex={activeMatchIndex}
+              onNext={handleSearchNext}
+              onPrev={handleSearchPrev}
+              onClose={handleSearchClose}
+              isMobile={false}
+            />
+          </div>
         ) : (
-          <div className="flex items-center justify-between">
+          <div className="mx-auto flex max-w-2xl lg:max-w-4xl items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => router.back()}
-                className="rounded-xl p-2.5 transition-all hover:bg-muted active:scale-95"
+                className="lg:hidden rounded-xl p-2.5 transition-all hover:bg-muted active:scale-95"
                 aria-label="Voltar"
               >
                 <ArrowLeft className="h-5 w-5 text-foreground" />
@@ -346,7 +361,7 @@ export function ZefaChatScreen() {
                   <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-success ring-2 ring-card" />
                 </div>
                 <div>
-                  <h1 className="text-base font-bold text-foreground">Zefa</h1>
+                  <h1 className="text-lg font-bold text-foreground">Zefa</h1>
                   <p className="text-xs text-success-foreground">Online</p>
                 </div>
               </div>
@@ -366,12 +381,30 @@ export function ZefaChatScreen() {
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="mx-auto max-w-2xl space-y-4">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto py-4 px-3 sm:px-4"
+        onScroll={handleMessagesScroll}
+      >
+        <div className="mx-auto max-w-2xl lg:max-w-4xl space-y-4">
           <ChatMessagesList messages={messages} renderMessage={renderMessage} />
 
           {/* Typing indicator */}
           {isAssistantTyping && <TypingIndicator />}
+
+          {/* Scroll to latest button */}
+          {!isAtBottom && (
+            <div className="sticky bottom-4 flex justify-center">
+              <button
+                type="button"
+                onClick={() => scrollToBottom("smooth")}
+                className="inline-flex items-center gap-1 rounded-full bg-card px-3 py-1 text-xs font-medium text-foreground shadow-md ring-1 ring-border/60 hover:bg-muted transition-colors"
+              >
+                <ChevronDown className="h-3 w-3" />
+                Ver mensagens recentes
+              </button>
+            </div>
+          )}
 
           <div ref={messagesEndRef} />
         </div>
@@ -383,8 +416,8 @@ export function ZefaChatScreen() {
        inputValue.trim() === "" && 
        messages.length === 1 && 
        messages[0].id === "welcome" && (
-        <div className="border-t border-border bg-card/50 px-4 py-3">
-          <div className="mx-auto max-w-2xl">
+        <div className="border-t border-border bg-card/50 py-3 px-3 sm:px-4">
+          <div className="mx-auto max-w-2xl lg:max-w-4xl">
             <p className="mb-2 text-xs text-muted-foreground">Sugestões:</p>
             <div className="flex flex-wrap gap-2">
               {SUGGESTIONS.map((suggestion) => (
@@ -404,8 +437,8 @@ export function ZefaChatScreen() {
       )}
 
       {/* Input */}
-      <div className="chat-input-container px-4 py-3 safe-area-bottom">
-        <form onSubmit={handleSubmit} className="mx-auto max-w-2xl">
+      <div className="chat-input-container py-3 mb-4 px-3 safe-area-bottom sm:py-4 sm:px-4">
+        <form onSubmit={handleSubmit} className="mx-auto max-w-2xl lg:max-w-4xl">
           <div className="flex items-center gap-2">
             <button
               type="button"

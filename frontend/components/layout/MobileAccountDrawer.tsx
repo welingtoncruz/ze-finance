@@ -4,6 +4,7 @@ import { SwipeDrawer } from "@/components/overlay/SwipeDrawer"
 import { Button } from "@/components/ui/button"
 import { LogOut, User, Settings } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
+import { useRouter } from "next/navigation"
 
 interface MobileAccountDrawerProps {
   isOpen: boolean
@@ -12,9 +13,15 @@ interface MobileAccountDrawerProps {
 
 export function MobileAccountDrawer({ isOpen, onClose }: MobileAccountDrawerProps) {
   const { logout } = useAuth()
+  const router = useRouter()
 
   const handleLogout = () => {
     logout()
+    onClose()
+  }
+
+  const handleSettings = () => {
+    router.push("/settings")
     onClose()
   }
 
@@ -37,7 +44,7 @@ export function MobileAccountDrawer({ isOpen, onClose }: MobileAccountDrawerProp
           <Button
             variant="outline"
             className="w-full justify-start gap-3 h-12"
-            onClick={onClose}
+            onClick={handleSettings}
           >
             <Settings className="h-5 w-5" />
             Configurações

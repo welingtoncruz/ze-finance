@@ -15,7 +15,7 @@
 
 ### **0.1. Full Name:**
 
-Wellington Cruz
+Welington Jafer Cruz
 
 ### **0.2. Project Name:**
 
@@ -66,13 +66,20 @@ Ze Finance is designed to help individuals track their personal finances through
 - Login with JWT token authentication
 - Secure password hashing (BCrypt)
 - Mobile logout access via account drawer
+- Automatic access token refresh using a long-lived refresh token stored in an HTTP-only cookie
 
 #### **Transactions**
 - List transactions (owned by logged-in user)
 - Create transaction (income/expense) with icon-grid category selection
-- Edit transaction (UI-only, local persistence; backend endpoint pending)
+- Edit transaction (backend-integrated PATCH endpoint with optimistic UI and local persistence for offline-safe edits)
 - Delete transaction (owned by logged-in user)
 - Data isolation enforced: users can only access their own transactions
+
+#### **User Profile & Settings**
+- Get user profile (email, full_name, monthly_budget) via `GET /user/profile`
+- Update profile (partial) via `PATCH /user/profile`
+- Settings page (`/settings`) for editing display name and monthly budget
+- Profile data cached in `localStorage` and synced with backend
 
 #### **Dashboard**
 - Summary totals (balance, income, expense)
@@ -124,7 +131,9 @@ The application follows a **responsive-first** design philosophy, ensuring the U
 3. Dashboard (home) → show summary
 4. Transactions list → list transactions
 5. Create transaction form → create transaction → refresh list/summary
-6. Delete transaction → refresh list/summary
+6. Edit transaction → PATCH backend → refresh list/summary
+7. Delete transaction → refresh list/summary
+8. Settings page → update profile (name, monthly budget)
 
 ### **1.4. Installation Instructions:**
 
@@ -243,7 +252,7 @@ flowchart LR
 **Trade-offs:**
 - Not using microservices (YAGNI principle - not needed for MVP)
 - Not implementing pure DDD patterns (simplified approach for MVP)
-- Database migrations use `Base.metadata.create_all()` for MVP (will migrate to Alembic later)
+- Database migrations use `Base.metadata.create_all()` on startup for MVP (Alembic can be introduced later when needed).
 
 ### **2.2. Main Components Description:**
 
@@ -296,10 +305,12 @@ ze-finance/
 │   │   ├── crud.py             # Data access logic (CRUD operations)
 │   │   ├── database.py        # DB connection configuration
 │   │   ├── auth_utils.py      # JWT logic and password hashing
+│   │   ├── rate_limit.py      # Rate limiting (SlowAPI, optional)
 │   │   └── routers/            # API route modules
 │   │       ├── auth.py         # Authentication routes
 │   │       ├── transactions.py # Transaction routes
-│   │       └── dashboard.py    # Dashboard routes
+│   │       ├── dashboard.py    # Dashboard routes
+│   │       └── user.py         # User profile routes
 │   ├── tests/                  # Backend tests
 │   │   ├── conftest.py         # Pytest fixtures
 │   │   ├── test_auth.py        # Auth tests
@@ -317,6 +328,7 @@ ze-finance/
 │   │   ├── register/          # Register page
 │   │   ├── transactions/      # Transactions page
 │   │   ├── insights/           # Insights page
+│   │   ├── settings/          # User settings page
 │   │   └── chat/              # Chat page
 │   ├── components/
 │   │   ├── ui/                # ShadcnUI primitives
@@ -327,6 +339,9 @@ ze-finance/
 │   │   │   ├── ChatBubble.tsx
 │   │   │   ├── TypingIndicator.tsx
 │   │   │   └── TransactionConfirmationCard.tsx
+│   │   ├── filters/           # Date/category filters (MonthSelector)
+│   │   ├── pwa/               # PWA components (AddToHomeScreenBanner)
+│   │   ├── settings/          # UserSettingsForm
 │   │   └── forms/             # Reusable form components
 │   ├── lib/
 │   │   ├── api.ts             # Axios instance & interceptors
@@ -422,13 +437,13 @@ flowchart TB
 
 #### **Deployment Strategy**
 
-**Recommended Approach (Future):**
-- **Frontend**: Deploy to static hosting (e.g., Vercel)
-- **Backend + DB**: Deploy to managed platform (e.g., Render/Fly/Railway)
+**Production stack (current):**
+- **Frontend**: Vercel (Next.js); root directory set to `frontend`
+- **Backend**: GCP Cloud Run (FastAPI container); build from `backend/` via Cloud Build or manual `gcloud run deploy`
+- **Database**: Neon (PostgreSQL); use pooled connection string for async driver
 - **Configuration**:
-  - Set `ALLOWED_ORIGINS` in backend to frontend domain
-  - Set `NEXT_PUBLIC_API_BASE_URL` in frontend to backend domain
-  - Use environment variables for all secrets
+  - Backend: `ALLOWED_ORIGINS` (Vercel URL), secrets via GCP Secret Manager (`DATABASE_URL`, `SECRET_KEY`, `GEMINI_API_KEY`)
+  - Frontend: `NEXT_PUBLIC_API_BASE_URL` (Cloud Run URL, no trailing slash)
 
 **CI/CD Pipeline (Basic):**
 Minimum CI pipeline should run on every PR:
@@ -530,7 +545,7 @@ async def test_create_transaction(async_client, auth_token):
 ```
 
 **Test Results:**
-- ✅ 19 backend tests passing
+- ✅ 48 backend tests passing
 
 #### **Frontend Tests**
 
@@ -568,6 +583,7 @@ erDiagram
         string email UK "unique, max 255"
         string hashed_password "BCrypt hash"
         string full_name "optional, max 100"
+        decimal monthly_budget "optional, current default monthly budget"
         timestamp created_at
         timestamp last_login_at "nullable"
     }
@@ -595,6 +611,7 @@ Represents a registered user in the system who has access to their own financial
 - **email** (`String(255)`, Unique, Not Null): Unique email address for login authentication, indexed for performance
 - **hashed_password** (`String(255)`, Not Null): Securely hashed password string using BCrypt. Plain text passwords are never stored
 - **full_name** (`String(100)`, Nullable): User's full name (optional)
+- **monthly_budget** (`Decimal/Numeric`, Nullable): The user's current default monthly budget used as a baseline for dashboard and insights calculations (not a per-month historical record)
 - **created_at** (`Timestamp`, Not Null): Timestamp of account creation, automatically set on insert
 - **last_login_at** (`Timestamp`, Nullable): Timestamp of the last successful authentication, updated on login
 
@@ -812,6 +829,87 @@ Authorization: Bearer <token>
 }
 ```
 
+#### **7. GET /user/profile** (Protected)
+
+Get the authenticated user's profile (email, full_name, monthly_budget).
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response (200 OK):**
+```json
+{
+  "email": "user@example.com",
+  "full_name": "John Doe",
+  "monthly_budget": 5000.0
+}
+```
+
+#### **8. PATCH /user/profile** (Protected)
+
+Update the authenticated user's profile (partial update).
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Request:**
+```json
+{
+  "full_name": "John Doe",
+  "monthly_budget": 5000.0
+}
+```
+
+**Response (200 OK):** Same structure as GET /user/profile with updated values.
+
+#### **9. POST /auth/refresh** (Protected)
+
+Exchange a valid refresh token for a new access token.  
+The refresh token is primarily sent as an HTTP-only cookie (`refresh_token`) and may optionally be provided in the request body.
+
+**Headers:**
+```
+Authorization: Bearer <expired-or-soon-to-expire-access-token> (optional)
+Cookie: refresh_token=<opaque-token>
+```
+
+**Request (optional JSON body):**
+```json
+{
+  "refresh_token": "opaque-refresh-token-value"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "access_token": "newly-issued-access-token",
+  "token_type": "bearer"
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized`: Missing, invalid, or expired refresh token
+
+#### **10. POST /auth/logout** (Protected)
+
+Logout the current user by revoking the refresh token and clearing the cookie.
+
+**Headers:**
+```
+Cookie: refresh_token=<opaque-token>
+```
+
+**Response (204 No Content):** Empty body
+
+**Behavior:**
+- Server revokes the stored refresh token so it can no longer be used
+- `refresh_token` cookie is cleared on the client
+
 **Full API Documentation:**
 The complete OpenAPI specification is available at `ai-specs/specs/api-spec.yml` and can be viewed interactively at http://localhost:8000/docs when the backend is running.
 
@@ -1027,7 +1125,7 @@ Create the MVP frontend scaffolding aligned with project standards (Next.js 14 A
 
 **Route Map (App Router):**
 - Public routes: `/login`, `/register`
-- Protected routes: `/` (dashboard), `/transactions`, `/insights`, `/chat`, `/onboarding`
+- Protected routes: `/` (dashboard), `/transactions`, `/insights`, `/chat`, `/settings`, `/onboarding`
 
 **Component Architecture:**
 - Layout components: DesktopSidebar, BottomNavigation, AppShell
@@ -1168,53 +1266,6 @@ This PR delivers the **Entrega 2 walking skeleton** with an end-to-end setup (**
 - **Frontend (E2E)**: `cd frontend && npx playwright test`
 - **Infra smoke test**: `docker compose up -d`
 
-**Notes / Follow-ups:**
-- `backend/zefa_local.db` is part of the branch diff (tracked file). If this DB is not meant to ship, consider removing it from git history in a follow-up and keeping it local-only.
-- `CLEANUP_REPORT.md` currently exists locally but is **not committed**, so it will **not** be included in the PR unless added.
-
----
-
-### **Pull Request 2: [Future PR - Example Structure]**
-
-**Branch:** `feature-[feature-name]`
-
-**Summary:**
-[Description of what this PR accomplishes]
-
-**What Changed:**
-- [List of changes]
-
-**Commits Included:**
-- [Commit hashes and messages]
-
-**Test Plan:**
-- [Test instructions]
-
-**Notes:**
-- [Any additional notes or follow-ups]
-
----
-
-### **Pull Request 3: [Future PR - Example Structure]**
-
-**Branch:** `feature-[feature-name]`
-
-**Summary:**
-[Description of what this PR accomplishes]
-
-**What Changed:**
-- [List of changes]
-
-**Commits Included:**
-- [Commit hashes and messages]
-
-**Test Plan:**
-- [Test instructions]
-
-**Notes:**
-- [Any additional notes or follow-ups]
-
----
 
 ## Additional Information
 
@@ -1256,9 +1307,10 @@ The project follows strict development standards enforced through Cursor IDE rul
 - ✅ MVP Walking Skeleton complete
 - ✅ End-to-end flow working (Frontend → API → DB)
 - ✅ Authentication and transaction management
+- ✅ User profile and settings (GET/PATCH /user/profile, /settings page)
 - ✅ Dashboard with summary and category breakdown
 - ✅ Chat interface with backend integration (feat-9)
-- 🔄 Transaction editing (UI-only, backend pending)
+- ✅ Transaction editing (backend + frontend fully integrated)
 
 ---
 
@@ -1333,6 +1385,6 @@ Replace the simulated chat interface with a fully integrated backend-connected c
 
 ---
 
-**Document Version:** 1.1  
-**Last Updated:** February 4, 2026  
-**Author:** Wellington Cruz
+**Document Version:** 1.2  
+**Last Updated:** February 10, 2026  
+**Author:** Welington Cruz
