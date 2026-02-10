@@ -5,20 +5,36 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
+import os
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Transaction, User
+from app.models import RefreshToken, Transaction, User
 from app.schemas import (
     CategoryMetric,
     DashboardSummary,
     TransactionCreate,
     TransactionUpdate,
     UserCreate,
+    UserProfileUpdate,
 )
-from app.auth_utils import get_password_hash, verify_password
+from app.auth_utils import get_password_hash, hash_refresh_token, verify_password
+
+
+def get_default_monthly_budget() -> Decimal:
+    """
+    Get the default monthly budget for new users.
+
+    Reads from DEFAULT_MONTHLY_BUDGET env var, falling back to 5000.
+    """
+    raw_value = os.getenv("DEFAULT_MONTHLY_BUDGET", "5000")
+    try:
+        return Decimal(raw_value)
+    except Exception:
+        # Fallback to a safe default if env value is invalid
+        return Decimal("5000")
 
 
 # Auth CRUD
@@ -50,6 +66,8 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
     db_user = User(
         email=user_in.email,
         hashed_password=hashed_password,
+        full_name=user_in.full_name.strip() if user_in.full_name else None,
+        monthly_budget=get_default_monthly_budget(),
     )
     db.add(db_user)
     await db.commit()
@@ -88,6 +106,109 @@ async def authenticate_user(
     await db.refresh(user)
     
     return user
+
+
+# Refresh token CRUD
+async def create_persistent_refresh_token(
+    db: AsyncSession,
+    user_id: UUID,
+    raw_token: str,
+    expires_at: datetime,
+    user_agent: Optional[str] = None,
+    ip_address: Optional[str] = None,
+) -> RefreshToken:
+    """
+    Persist a hashed refresh token for a user.
+    
+    Args:
+        db: Database session
+        user_id: ID of the user
+        raw_token: Plain text refresh token
+        expires_at: Expiration datetime for the refresh token
+        user_agent: Optional user agent string for auditing
+        ip_address: Optional IP address for auditing
+        
+    Returns:
+        The created RefreshToken object
+    """
+    del user_agent  # Reserved for future auditing improvements
+    del ip_address  # Reserved for future auditing improvements
+
+    token = RefreshToken(
+        user_id=user_id,
+        token_hash=hash_refresh_token(raw_token),
+        expires_at=expires_at,
+    )
+    db.add(token)
+    await db.commit()
+    await db.refresh(token)
+    return token
+
+
+async def find_valid_refresh_token(
+    db: AsyncSession,
+    raw_token: str,
+) -> Optional[RefreshToken]:
+    """
+    Find a valid (non-expired, non-revoked) refresh token by its raw value.
+    
+    Args:
+        db: Database session
+        raw_token: Plain text refresh token
+        
+    Returns:
+        RefreshToken object if found and valid, None otherwise
+    """
+    now = datetime.utcnow()
+    token_hash = hash_refresh_token(raw_token)
+    result = await db.execute(
+        select(RefreshToken).where(
+            (RefreshToken.token_hash == token_hash)
+            & (RefreshToken.expires_at > now)
+            & (RefreshToken.revoked_at.is_(None))
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def revoke_refresh_token(
+    db: AsyncSession,
+    refresh_token: RefreshToken,
+) -> None:
+    """
+    Revoke a single refresh token.
+    
+    Args:
+        db: Database session
+        refresh_token: The RefreshToken instance to revoke
+    """
+    refresh_token.revoked_at = datetime.utcnow()
+    await db.commit()
+
+
+async def revoke_refresh_token_by_raw(
+    db: AsyncSession,
+    raw_token: str,
+) -> None:
+    """
+    Revoke a refresh token by its raw value.
+    
+    Args:
+        db: Database session
+        raw_token: Plain text refresh token
+    """
+    token_hash = hash_refresh_token(raw_token)
+    now = datetime.utcnow()
+    result = await db.execute(
+        select(RefreshToken).where(
+            (RefreshToken.token_hash == token_hash)
+            & (RefreshToken.revoked_at.is_(None))
+        )
+    )
+    token = result.scalar_one_or_none()
+    if token:
+        token.revoked_at = now
+        await db.commit()
 
 
 # Transaction CRUD
@@ -315,3 +436,75 @@ async def get_dashboard_summary(
         total_expense=total_expense,
         by_category=by_category,
     )
+
+
+async def get_user_profile(
+    db: AsyncSession,
+    user_id: UUID,
+) -> User:
+    """
+    Get the authenticated user's profile.
+
+    Args:
+        db: Database session
+        user_id: ID of the authenticated user
+
+    Returns:
+        User entity for profile mapping
+
+    Raises:
+        HTTPException: If user is not found
+    """
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    return user
+
+
+async def update_user_profile(
+    db: AsyncSession,
+    user_id: UUID,
+    profile_in: UserProfileUpdate,
+) -> User:
+    """
+    Update the authenticated user's profile fields.
+
+    Args:
+        db: Database session
+        user_id: ID of the authenticated user
+        profile_in: Profile update payload
+
+    Returns:
+        Updated User entity
+
+    Raises:
+        HTTPException: If user is not found
+    """
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    update_data = profile_in.model_dump(exclude_unset=True)
+
+    if "full_name" in update_data:
+        user.full_name = update_data["full_name"]
+
+    if "monthly_budget" in update_data and update_data["monthly_budget"] is not None:
+        if update_data["monthly_budget"] <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Monthly budget must be positive",
+            )
+        user.monthly_budget = update_data["monthly_budget"]
+
+    await db.commit()
+    await db.refresh(user)
+    return user

@@ -10,6 +10,7 @@ import { TransactionItem } from "./TransactionItem"
 import { EmptyState } from "../empty/EmptyState"
 import { ThemeToggle } from "../theme-toggle"
 import { SkeletonLoader } from "../loading/SkeletonLoader"
+import { MonthSelector } from "../filters/MonthSelector"
 
 interface TransactionsScreenProps {
   transactions: Transaction[]
@@ -28,12 +29,14 @@ export function TransactionsScreen({
 }: TransactionsScreenProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all")
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7))
 
   if (isLoading) {
     return <SkeletonLoader />
   }
 
   const filteredTransactions = transactions
+    .filter((t) => t.date.startsWith(selectedMonth))
     .filter((t) => t.category.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((t) => filterType === "all" || t.type === filterType)
 
@@ -76,7 +79,7 @@ export function TransactionsScreen({
   return (
     <div className="flex min-h-screen flex-col pb-28 lg:pb-8 theme-transition bg-mesh-gradient">
       {/* Mobile Header */}
-      <header className="sticky top-0 z-10 gradient-header px-5 py-5 lg:hidden">
+      <header className="sticky top-0 z-10 gradient-header px-3 py-5 lg:hidden">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-foreground/15">
@@ -118,10 +121,18 @@ export function TransactionsScreen({
         </div>
       </header>
 
-      <div className="flex-1 p-4 sm:p-5 lg:p-8">
+      <div className="flex-1 py-4 px-3 sm:p-5 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-4">
           {/* Summary Cards */}
-          <div className="grid grid-cols-3 gap-3 lg:gap-4 mb-6">
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Visão do mês
+              </h2>
+              <MonthSelector selectedMonth={selectedMonth} onChange={setSelectedMonth} />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 lg:gap-4">
             <Card className="glass-card border-0 hover-lift stat-card">
               <CardContent className="p-4 lg:p-5">
                 <div className="flex flex-col items-center text-center gap-2">
@@ -161,6 +172,7 @@ export function TransactionsScreen({
                 </div>
               </CardContent>
             </Card>
+            </div>
           </div>
 
           {/* Filters */}

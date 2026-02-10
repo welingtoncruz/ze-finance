@@ -2,6 +2,10 @@
 Pytest configuration and fixtures for integration tests.
 """
 import os
+
+# Must set before importing app (rate limiting is disabled when ENVIRONMENT=test)
+os.environ.setdefault("ENVIRONMENT", "test")
+
 from typing import AsyncGenerator
 
 import pytest
@@ -11,6 +15,13 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
+
+
+# Test-only route for unhandled exception handling tests
+@app.get("/__test_unhandled_error")
+async def _raise_unhandled_error() -> dict:
+    """Raise an unhandled exception for error handling tests."""
+    raise RuntimeError("boom")  # noqa: TRY003
 
 # Use in-memory SQLite for testing (async)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -67,8 +78,10 @@ async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, 
     Create an async test client with database override.
     """
     app.dependency_overrides[get_db] = override_get_db
-    
-    transport = ASGITransport(app=app)
+
+    # raise_app_exceptions=False so 500 responses are returned instead of raised
+    # (ServerErrorMiddleware re-raises after sending; we need the response for assertions)
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
     

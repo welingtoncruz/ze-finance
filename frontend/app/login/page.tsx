@@ -6,6 +6,7 @@ import { Wallet, Sparkles, BarChart3, Shield, Zap } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { AuthForm } from "@/components/auth/AuthForm"
 import { useAuth } from "@/context/AuthContext"
+import { getUserFriendlyApiError } from "@/lib/errors/apiErrorMapper"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -18,17 +19,13 @@ export default function LoginPage() {
     }
   }, [isHydrated, isAuthenticated, router])
 
-  const handleLogin = async (email: string, password: string) => {
+  const handleLogin = async (email: string, password: string, rememberMe?: boolean) => {
     try {
       setError(null)
-      await login(email, password)
+      await login(email, password, rememberMe)
       router.push("/")
     } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "E-mail ou senha inválidos. Tente novamente."
-      )
+      setError(getUserFriendlyApiError(err, "auth"))
     }
   }
 

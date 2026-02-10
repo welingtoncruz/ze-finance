@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#teal)"/>
+  <!-- Bold "Z" for Zefa - clean geometric shape -->
+  <path d="M96 96 L416 96 L416 136 L176 376 L96 376 L96 416 L416 416 L416 376 L176 136 L96 136 Z" fill="white"/>
+</svg>

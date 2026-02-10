@@ -17,22 +17,37 @@ test.describe("Create Transaction Flow (E2E)", () => {
     
     const emailInput = page.getByTestId("auth-email").or(page.getByLabel("Email"))
     const passwordInput = page.getByTestId("auth-password").or(page.getByLabel("Password"))
-    const submitButton = page.getByTestId("auth-submit").or(page.getByRole("button", { name: /sign up/i }))
+    const nameInput = page.getByLabel("Nome")
+    const submitButton = page
+      .getByTestId("auth-submit")
+      .or(page.getByRole("button", { name: /cadastrar|sign up/i }))
 
     await emailInput.waitFor({ state: "visible" })
     await emailInput.fill(testEmail)
-    
+
+    if (await nameInput.isVisible().catch(() => false)) {
+      await nameInput.fill("E2E Test User")
+    }
+
     await passwordInput.waitFor({ state: "visible" })
     await passwordInput.fill(testPassword)
-    
+
     await submitButton.waitFor({ state: "visible" })
     await submitButton.click()
 
-    // Step 3: Confirm redirect to authenticated page (dashboard or transactions)
-    // Wait for navigation away from register page
-    await page.waitForURL((url) => !url.pathname.includes("/register"), {
-      timeout: 5000,
-    })
+    // Step 3: Wait for either redirect or connection error (backend unreachable)
+    const connectionError = page.getByText(/erro de conexão|verifique sua internet/i)
+    const result = await Promise.race([
+      page
+        .waitForURL((url) => !url.pathname.includes("/register"), { timeout: 10000 })
+        .then(() => "success"),
+      connectionError.waitFor({ state: "visible", timeout: 8000 }).then(() => "error"),
+    ])
+    if (result === "error") {
+      throw new Error(
+        "Backend API unreachable. Start the backend: cd backend && uvicorn app.main:app --reload --port 8000"
+      )
+    }
 
     // Step 4: Navigate to transactions page
     await page.goto("/transactions")
@@ -125,21 +140,37 @@ test.describe("Create Transaction Flow (E2E)", () => {
     
     const emailInput = page.getByTestId("auth-email").or(page.getByLabel("Email"))
     const passwordInput = page.getByTestId("auth-password").or(page.getByLabel("Password"))
-    const submitButton = page.getByTestId("auth-submit").or(page.getByRole("button", { name: /sign up/i }))
-    
+    const nameInput = page.getByLabel("Nome")
+    const submitButton = page
+      .getByTestId("auth-submit")
+      .or(page.getByRole("button", { name: /cadastrar|sign up/i }))
+
     await emailInput.waitFor({ state: "visible" })
     await emailInput.fill(testEmail)
-    
+
+    if (await nameInput.isVisible().catch(() => false)) {
+      await nameInput.fill("E2E Test User")
+    }
+
     await passwordInput.waitFor({ state: "visible" })
     await passwordInput.fill(testPassword)
-    
+
     await submitButton.waitFor({ state: "visible" })
     await submitButton.click()
 
-    // Wait for redirect
-    await page.waitForURL((url) => !url.pathname.includes("/register"), {
-      timeout: 5000,
-    })
+    // Wait for either redirect or connection error
+    const connectionError = page.getByText(/erro de conexão|verifique sua internet/i)
+    const result = await Promise.race([
+      page
+        .waitForURL((url) => !url.pathname.includes("/register"), { timeout: 10000 })
+        .then(() => "success"),
+      connectionError.waitFor({ state: "visible", timeout: 8000 }).then(() => "error"),
+    ])
+    if (result === "error") {
+      throw new Error(
+        "Backend API unreachable. Start the backend: cd backend && uvicorn app.main:app --reload --port 8000"
+      )
+    }
 
     // Navigate to transactions
     await page.goto("/transactions")

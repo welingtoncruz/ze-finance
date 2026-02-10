@@ -1,4 +1,16 @@
 /**
+ * Escape HTML entities to prevent XSS when injecting into HTML.
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+/**
  * Normalize text by removing diacritics (for PT-BR search matching)
  */
 function normalizeText(text: string): string {
@@ -101,7 +113,7 @@ export function highlightSearchTerms(text: string, searchQuery: string): string 
     .map((part) => {
       const substring = text.slice(part.start, part.end)
       return part.isMatch
-        ? `<mark data-search-highlight="true">${substring}</mark>`
+        ? `<mark data-search-highlight="true">${escapeHtml(substring)}</mark>`
         : substring
     })
     .join("")

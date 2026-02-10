@@ -1,5 +1,7 @@
 """
 CRUD operations for chat messages and conversation summaries.
+Note: conversation_id from client is a logical grouping key only. All queries
+filter by user_id from JWT—conversation isolation is enforced; no cross-user access.
 """
 import os
 from typing import List, Optional

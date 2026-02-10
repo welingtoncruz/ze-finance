@@ -66,6 +66,8 @@ python -m pytest -v
 
 ## Database Management
 
+Tables are created automatically on startup using `Base.metadata.create_all()` (MVP approach; you can drop and recreate the database as needed during testing).
+
 ### Access Database Admin UI (Optional)
 
 Start Adminer (lightweight database admin tool):
@@ -104,6 +106,8 @@ See `.env.example` for all available environment variables:
 - `SECRET_KEY`: JWT signing secret (change in production)
 - `ACCESS_TOKEN_EXPIRE_MINUTES`: JWT token expiration time
 - `ALGORITHM`: JWT algorithm (default: HS256)
+- `REFRESH_TOKEN_EXPIRE_DAYS`: Refresh token lifetime in days for normal sessions (default: 7)
+- `REFRESH_TOKEN_EXPIRE_DAYS_REMEMBER_ME`: Refresh token lifetime in days when the user selects “remember me” (default: 30)
 - `ALLOWED_ORIGINS`: JSON array of allowed CORS origins
 
 ### AI Chat Agent (Zefa)
@@ -120,6 +124,15 @@ See `.env.example` for all available environment variables:
 - `GEMINI_API_KEY`: Gemini API key (required if using Gemini)
 
 **Note**: If API keys are not set in environment variables, users can provide them temporarily via the `/chat/api-key` endpoint. Ephemeral keys are stored in-memory only and expire after 60 minutes.
+
+## Authentication and refresh flow
+
+- Access tokens are short-lived JWTs returned by `/auth/register` and `/token`.
+- On login, the server also issues a long-lived opaque refresh token, stored only as a hash in the `refresh_tokens` table and sent to the browser as an HTTP-only `refresh_token` cookie.
+- The frontend automatically:
+  - Attempts an initial `/auth/refresh` call on app load if no access token is in `localStorage`.
+  - Calls `/auth/refresh` once when a request returns `401`, then retries the original request with the new access token.
+- Calling `/auth/logout` revokes the current refresh token server-side and clears the cookie so it can no longer be used.
 
 ## Development Notes
 
@@ -148,10 +161,16 @@ The chat agent follows a modular architecture:
 - **Prompt** (`app/ai/prompt.py`): System instructions and Zefa persona
 - **Chat CRUD** (`app/chat/crud.py`): Message persistence and conversation management
 - **Chat Routes** (`app/chat/routes.py`): HTTP endpoints for chat interactions
+- **User Router** (`app/routers/user.py`): User profile endpoints (`GET/PATCH /user/profile`)
+- **Rate Limiting** (`app/rate_limit.py`): Optional SlowAPI-based rate limiting (disabled when `ENVIRONMENT=test` or when slowapi is not installed)
 
 ### Testing
 
 Integration tests are available in `tests/test_chat_agent.py`. Tests use `respx` to mock AI provider API calls.
+
+## Production deployment
+
+The backend is deployed to **GCP Cloud Run** with Neon as the database. For the full production setup (Vercel + Neon + Cloud Run), see **`ai-specs/changes/deploy-production-vercel-neon-gcp-plan.md`** in the repository root.
 
 ## Troubleshooting
 

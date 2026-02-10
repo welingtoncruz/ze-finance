@@ -4,9 +4,33 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import type { ChatMessage } from "@/lib/types"
 import { sendChatMessage } from "@/lib/chat/service"
-// Storage key: For MVP, using default. In future, can be scoped to userId if available
-// Example: `zefa_chat_v1:${userId}` for multi-user support
-const STORAGE_KEY = "zefa_chat_v1:default"
+
+const CHAT_STORAGE_PREFIX = "zefa_chat_v1"
+const ANONYMOUS_STORAGE_KEY = `${CHAT_STORAGE_PREFIX}:anonymous`
+
+function getChatStorageKey(): string {
+  // On the server, use a stable key but we never actually read/write localStorage
+  if (typeof window === "undefined") {
+    return `${CHAT_STORAGE_PREFIX}:ssr`
+  }
+
+  try {
+    const rawProfile = window.localStorage.getItem("zefa_profile")
+    if (rawProfile) {
+      const parsed = JSON.parse(rawProfile) as { id?: string | null }
+      const userId = typeof parsed.id === "string" && parsed.id ? parsed.id : null
+
+      if (userId) {
+        return `${CHAT_STORAGE_PREFIX}:${userId}`
+      }
+    }
+  } catch (error) {
+    console.error("Failed to derive chat storage key from zefa_profile:", error)
+  }
+
+  // Fallback: shared/anonymous key keeps current behavior when profile is not available
+  return ANONYMOUS_STORAGE_KEY
+}
 
 /** Persisted format matches ChatMessage, with timestamp as ISO string */
 interface PersistedChatMessage {
@@ -42,7 +66,8 @@ function loadFromStorage(): PersistedChatState | null {
   }
 
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    const storageKey = getChatStorageKey()
+    const stored = window.localStorage.getItem(storageKey)
     if (!stored) {
       return null
     }
@@ -61,6 +86,7 @@ function saveToStorage(conversationId: string | null | undefined, messages: Chat
   }
 
   try {
+    const storageKey = getChatStorageKey()
     const persisted: PersistedChatState = {
       conversationId: conversationId || null,
       messages: messages.map((msg) => ({
@@ -76,7 +102,7 @@ function saveToStorage(conversationId: string | null | undefined, messages: Chat
       })),
     }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted))
+    window.localStorage.setItem(storageKey, JSON.stringify(persisted))
   } catch (error) {
     console.error("Failed to save chat to localStorage:", error)
   }
@@ -309,7 +335,8 @@ export function useChat(): UseChatReturn {
     setMessages([INITIAL_MESSAGE])
     setConversationId(null)
     if (typeof window !== "undefined") {
-      localStorage.removeItem(STORAGE_KEY)
+      const storageKey = getChatStorageKey()
+      window.localStorage.removeItem(storageKey)
     }
   }, [])
 

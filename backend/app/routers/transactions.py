@@ -3,7 +3,7 @@ Transaction routes: create, list, and delete transactions.
 """
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import crud, schemas
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 
 @router.get("", response_model=list[schemas.TransactionResponse])
 async def list_transactions(
-    limit: int = 50,
+    limit: int = Query(default=50, ge=1, le=500, description="Max transactions to return"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[schemas.TransactionResponse]:

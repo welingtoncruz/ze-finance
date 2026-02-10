@@ -56,6 +56,7 @@ export interface ChatMessage {
 }
 
 export interface UserProfile {
+  id?: string
   name: string
   monthlyBudget: number
   savingsGoal: number

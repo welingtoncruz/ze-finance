@@ -26,7 +26,7 @@ vi.mock("@/lib/api", () => ({
   },
 }))
 
-// Mock localStorage
+// Mock localStorage (implements Storage interface including key/length for clearAllZefaStorage)
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
 
@@ -40,6 +40,13 @@ const localStorageMock = (() => {
     },
     clear: () => {
       store = {}
+    },
+    get length() {
+      return Object.keys(store).length
+    },
+    key: (index: number) => {
+      const keys = Object.keys(store)
+      return keys[index] ?? null
     },
   }
 })()
@@ -285,7 +292,7 @@ describe("Chat Integration Tests", () => {
     )
 
     // Check localStorage
-    const stored = localStorageMock.getItem("zefa_chat_v1:default")
+    const stored = localStorageMock.getItem("zefa_chat_v1:anonymous")
     expect(stored).toBeTruthy()
 
     const parsed = JSON.parse(stored!)
@@ -316,7 +323,7 @@ describe("Chat Integration Tests", () => {
       ],
     }
 
-    localStorageMock.setItem("zefa_chat_v1:default", JSON.stringify(persistedState))
+    localStorageMock.setItem("zefa_chat_v1:anonymous", JSON.stringify(persistedState))
 
     renderChatPage()
 

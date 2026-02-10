@@ -20,6 +20,9 @@ Build an MVP personal finance assistant focused on a **Walking Skeleton**: a com
   - Create transaction (income/expense) with icon-grid category selection
   - Edit transaction (PATCH backend + UI)
   - Delete transaction (owned by logged-in user)
+- **User Profile & Settings**
+  - Get/update profile (email, full_name, monthly_budget) via `GET/PATCH /user/profile`
+  - Settings page (`/settings`) for editing display name and monthly budget
 - **Dashboard**
   - Summary totals (balance, income, expense) and breakdown by category
 - **Chat (AI Agent)**
@@ -102,6 +105,7 @@ erDiagram
     string email UK
     string hashed_password
     string full_name
+    decimal monthly_budget
     timestamp created_at
     timestamp last_login_at
   }
@@ -154,6 +158,11 @@ Authoritative contract: `ai-specs/specs/api-spec.yml`.
 - **Auth**
   - `POST /auth/register` (public) → create user + return token
   - `POST /token` (public, OAuth2 form) → return token
+  - `POST /auth/refresh` (protected) → exchange a valid refresh token (HTTP-only cookie or optional body) for a new access token
+  - `POST /auth/logout` (protected) → revoke refresh token and clear the cookie
+- **User Profile** (protected)
+  - `GET /user/profile` → returns authenticated user's email, full_name, monthly_budget
+  - `PATCH /user/profile` → partial update of profile (full_name, monthly_budget)
 - **Transactions** (protected, require JWT bearer token)
   - `GET /transactions?limit=50` → list user transactions
   - `POST /transactions` → create user transaction
@@ -169,6 +178,7 @@ Authoritative contract: `ai-specs/specs/api-spec.yml`.
 - Passwords must be stored hashed (never plaintext).
 - JWT tokens must expire and be validated on protected routes.
 - Enforce ownership checks for all transaction resources.
+- Refresh tokens must be opaque, hashed at rest in the database, stored with explicit expiry and revocation, and only sent to the client via HTTP-only cookies.
 
 ---
 
@@ -183,7 +193,9 @@ Minimum navigable flow:
 3. Dashboard (home) → show summary
 4. Transactions list → list transactions
 5. Create transaction form → create transaction → refresh list/summary
-6. Delete transaction → refresh list/summary
+6. Edit transaction → PATCH backend → refresh list/summary
+7. Delete transaction → refresh list/summary
+8. Settings page (`/settings`) → update profile (name, monthly budget)
 
 #### UX constraints
 - Responsive-first layout across desktop/tablet/mobile (avoid “phone frame” constraints on desktop).
@@ -198,6 +210,11 @@ Minimum navigable flow:
 - `ChatMessageAnchor.tsx`: Anchor links for in-message navigation (e.g. to transactions)
 - `TypingIndicator.tsx`: "Zefa está digitando..." animation
 - `TransactionConfirmationCard.tsx`: Success card for transaction confirmations
+
+**Settings & Filters:**
+- `UserSettingsForm.tsx`: Form for editing display name and monthly budget (calls `GET/PATCH /user/profile`)
+- `MonthSelector.tsx`: Date filter component for insights/transactions
+- `AddToHomeScreenBanner.tsx`: PWA "add to home screen" prompt
 
 **State Management:**
 - `useChat` hook: Manages messages, conversation ID, typing state, and localStorage persistence
@@ -223,6 +240,20 @@ Minimum navigable flow:
 - Stores conversation ID and messages (with ISO timestamp strings)
 - Long-term persistence: Survives browser close/reopen
 - Rehydrates on component mount with hydration gating to prevent data loss
+
+#### Security (localStorage and headers)
+
+**Full logout and storage cleanup:**
+- On logout (user-initiated or 401 after failed refresh), all keys prefixed with `zefa_` are removed from localStorage via `lib/storage.ts` (`clearAllZefaStorage`).
+- Covers: `zefa_token`, `zefa_profile`, `zefa_chat_v1:*`, `zefa_local_edits_v2`, `zefa_pwa_prompt_dismissed_until`.
+- Prevents data leakage on shared devices when a user logs out.
+
+**Security headers (Next.js):**
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: SAMEORIGIN`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy` restricting camera, microphone, geolocation
+- `Content-Security-Policy` restricting script, style, connect, and frame sources to reduce XSS surface
 
 ---
 
@@ -301,10 +332,9 @@ Recommended CI steps:
 - Provide `.env.example` files for both backend (`backend/.env.example`) and frontend (`frontend/.env.example`) (recommended).
 
 #### Public URL / accessible environment
-- Recommended approach:
-  - Deploy frontend to a static hosting platform (e.g., Vercel)
-  - Deploy backend + DB to a managed platform (e.g., Render/Fly/Railway)
-  - Configure CORS (`ALLOWED_ORIGINS`) and API base URL (`NEXT_PUBLIC_API_BASE_URL`)
+- **Production stack**: Frontend on **Vercel**, backend on **GCP Cloud Run**, database on **Neon** (PostgreSQL). Full step-by-step guide: `ai-specs/changes/deploy-production-vercel-neon-gcp-plan.md`.
+- Configure CORS (`ALLOWED_ORIGINS`) on the backend to the Vercel origin; set `NEXT_PUBLIC_API_BASE_URL` on the frontend to the Cloud Run URL (no trailing slash).
+- Backend secrets (e.g. `DATABASE_URL`, `SECRET_KEY`, `GEMINI_API_KEY`) are stored in GCP Secret Manager and mounted into Cloud Run.
 
 ---
 

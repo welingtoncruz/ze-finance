@@ -105,6 +105,13 @@ cd frontend
 npm test
 ```
 
+### E2E tests (Playwright)
+
+```bash
+cd frontend
+npx playwright test
+```
+
 ## Troubleshooting
 
 ### Database connection issues
@@ -119,4 +126,8 @@ npm test
 docker compose down -v
 docker compose up -d db
 ```
+
+## Production deployment
+
+For production (Vercel + Neon + GCP Cloud Run), see **`ai-specs/changes/deploy-production-vercel-neon-gcp-plan.md`**.
 

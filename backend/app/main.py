@@ -2,17 +2,23 @@
 FastAPI application entrypoint and configuration.
 """
 import asyncio
+import json
+import logging
 import os
+import traceback
 from contextlib import asynccontextmanager
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
+from decimal import Decimal
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.database import Base, engine
-from app.routers import auth, dashboard, transactions
+from app.rate_limit import limiter, RATE_LIMIT_AVAILABLE
+from app.routers import auth, dashboard, transactions, user
 from app.chat import routes as chat_routes
+from app.auth_utils import _validate_secret_key
 
 
 async def _ensure_tables() -> None:
@@ -27,10 +33,15 @@ async def lifespan(app: FastAPI):
     Lifespan context manager for startup and shutdown events.
     Start listening first so Cloud Run sees the container ready; run DB init in background.
     """
+    _validate_secret_key()
     # Run table creation in background so we don't block binding to PORT (Cloud Run timeout)
     asyncio.create_task(_ensure_tables())
     yield
     await engine.dispose()
+
+
+# Configure logger for error handling
+logger = logging.getLogger("zefa.api")
 
 
 # Create FastAPI app
@@ -40,11 +51,15 @@ app = FastAPI(
     version="0.2.0",
     lifespan=lifespan,
 )
+if RATE_LIMIT_AVAILABLE:
+    from slowapi import _rate_limit_exceeded_handler
+    from slowapi.errors import RateLimitExceeded
+
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure CORS: accept JSON array or single origin (GCP env can be stored without brackets)
 # Normalize: strip trailing slash so "https://ze-finance.vercel.app/" matches browser "https://ze-finance.vercel.app"
-import json
-
 def _normalize_origin(o: str) -> str:
     return (o or "").strip().rstrip("/")
 
@@ -70,23 +85,70 @@ app.add_middleware(
 )
 
 
-class EnsureCORSHeadersMiddleware(BaseHTTPMiddleware):
-    """Ensure CORS headers on every response (including 5xx). Match origin with trailing slash normalized."""
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        origin = request.headers.get("origin")
-        if origin and _normalize_origin(origin) in allowed_origins:
-            response.headers.setdefault("Access-Control-Allow-Origin", origin)
-            response.headers.setdefault("Access-Control-Allow-Credentials", "true")
-        return response
+def _safe_500_response() -> JSONResponse:
+    """Return a generic 500 response without exposing internal details."""
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error"},
+    )
 
 
-app.add_middleware(EnsureCORSHeadersMiddleware)
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """
+    Global handler for unexpected exceptions.
+    Logs full traceback server-side and returns a safe generic message to the client.
+    """
+    logger.error(
+        "Unhandled exception while processing request %s %s: %s",
+        request.method,
+        request.url.path,
+        "".join(traceback.format_exception(type(exc), exc, exc.__traceback__)),
+    )
+    return _safe_500_response()
+
+
+def _json_safe(obj: object) -> object:
+    """Convert non-JSON-serializable values for error payloads."""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    return obj
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError,
+) -> JSONResponse:
+    """
+    Normalize validation errors into a compact, safe structure.
+    Does not expose internal details, only field-level validation messages.
+    """
+    errors = exc.errors()
+    logger.debug(
+        "Request validation error on %s %s: %s",
+        request.method,
+        request.url.path,
+        errors,
+    )
+    safe_errors = _json_safe(errors)
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "detail": "Request validation failed",
+            "errors": safe_errors,
+        },
+    )
 
 # Include routers
 app.include_router(auth.router)
 app.include_router(transactions.router)
 app.include_router(dashboard.router)
+app.include_router(user.router)
 app.include_router(chat_routes.router)
 
 

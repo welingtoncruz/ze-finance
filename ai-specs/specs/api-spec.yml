@@ -16,6 +16,8 @@ tags:
     description: Health and meta endpoints
   - name: auth
     description: Authentication
+  - name: user
+    description: User profile (authenticated user configuration)
   - name: transactions
     description: Transactions CRUD (create/list/update/delete)
   - name: dashboard
@@ -52,6 +54,14 @@ components:
         token_type:
           type: string
           example: bearer
+
+    TokenRefreshRequest:
+      type: object
+      description: Optional body for refresh token exchange; normally the token is taken from an HTTP-only cookie.
+      properties:
+        refresh_token:
+          type: string
+          description: Opaque refresh token value (used mainly for non-browser clients).
 
     # --- Transactions ---
     TransactionType:
@@ -142,6 +152,36 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CategoryMetric"
+
+    # --- User Profile ---
+    UserProfileResponse:
+      type: object
+      required: [email, monthly_budget]
+      properties:
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+          nullable: true
+        monthly_budget:
+          type: number
+          format: float
+          minimum: 0.01
+          description: Monthly budget for dashboard calculations (uses DEFAULT_MONTHLY_BUDGET when null at creation).
+
+    UserProfileUpdate:
+      type: object
+      description: Partial update for authenticated user profile (all fields optional).
+      properties:
+        full_name:
+          type: string
+          nullable: true
+        monthly_budget:
+          type: number
+          format: float
+          minimum: 0.01
+          nullable: true
 
     # --- Chat ---
     ChatMessageCreate:
@@ -365,6 +405,80 @@ paths:
                 $ref: "#/components/schemas/Token"
         "401":
           description: Invalid credentials.
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Refresh access token
+      description: >
+        Exchanges a valid refresh token for a new access token.
+        The refresh token is primarily sent as an HTTP-only cookie (refresh_token), but an optional JSON body is supported.
+      operationId: refresh_access_token
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRefreshRequest"
+      responses:
+        "200":
+          description: New access token issued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+        "401":
+          description: Missing, invalid, or expired refresh token.
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Logout and revoke refresh token
+      description: >
+        Revokes the current refresh token and clears the corresponding cookie so it can no longer be used.
+      operationId: logout
+      responses:
+        "204":
+          description: Logged out; refresh token revoked and cookie cleared.
+
+  # --- User Profile (protected) ---
+  /user/profile:
+    get:
+      tags: [user]
+      summary: Get user profile
+      description: Returns the authenticated user's profile (email, full_name, monthly_budget).
+      operationId: get_user_profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+        "401":
+          description: Unauthorized (missing or invalid token)
+    patch:
+      tags: [user]
+      summary: Update user profile
+      description: Updates the authenticated user's profile (partial update).
+      operationId: update_user_profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+        "400":
+          description: Validation error (e.g., monthly_budget <= 0)
+        "401":
+          description: Unauthorized
 
   # --- Protected Auth (helper) ---
   /auth/me:

@@ -9,20 +9,23 @@ import { QuickAddTransaction } from "@/components/transactions/QuickAddTransacti
 import { EditTransactionDrawer } from "@/components/transactions/EditTransactionDrawer"
 import { useAuth } from "@/context/AuthContext"
 import api from "@/lib/api"
-import type { ApiTransactionResponse } from "@/lib/types/api"
+import type { ApiTransactionResponse, ApiUserProfileResponse } from "@/lib/types/api"
 import {
   mapApiTransactionToUi,
   mapUiTransactionToApiCreate,
   mapUiTransactionToApiUpdate,
+  mapApiUserProfileToUi,
 } from "@/lib/types/api"
 import type { Transaction, UserProfile } from "@/lib/types"
 import { toast } from "sonner"
+import { getUserFriendlyApiError } from "@/lib/errors/apiErrorMapper"
 
 function TransactionsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { isAuthenticated, isHydrated } = useAuth()
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
@@ -42,19 +45,36 @@ function TransactionsPageContent() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      loadTransactions()
+      void loadData()
     }
   }, [isAuthenticated])
 
-  const loadTransactions = async () => {
+  const loadData = async () => {
     try {
       setIsLoading(true)
-      const response = await api.get<ApiTransactionResponse[]>("/transactions?limit=50")
-      const mappedTransactions = response.data.map(mapApiTransactionToUi)
+      const [profileRes, transactionsRes] = await Promise.all([
+        api.get<ApiUserProfileResponse>("/user/profile"),
+        api.get<ApiTransactionResponse[]>("/transactions?limit=50"),
+      ])
+
+      const mappedProfile = mapApiUserProfileToUi(profileRes.data)
+      setUserProfile(mappedProfile)
+      if (typeof window !== "undefined") {
+        localStorage.setItem("zefa_profile", JSON.stringify(mappedProfile))
+      }
+
+      const mappedTransactions = transactionsRes.data.map(mapApiTransactionToUi)
       setTransactions(mappedTransactions)
     } catch (error) {
-      console.error("Failed to load transactions:", error)
+      console.error("Failed to load data:", error)
       toast.error("Falha ao carregar transações")
+
+      if (typeof window !== "undefined") {
+        const savedProfile = localStorage.getItem("zefa_profile")
+        if (savedProfile) {
+          setUserProfile(JSON.parse(savedProfile))
+        }
+      }
     } finally {
       setIsLoading(false)
     }
@@ -70,7 +90,7 @@ function TransactionsPageContent() {
       toast.success("Transação adicionada com sucesso")
     } catch (error) {
       console.error("Failed to add transaction:", error)
-      toast.error("Falha ao adicionar transação")
+      toast.error(getUserFriendlyApiError(error, "transaction"))
       throw error
     }
   }
@@ -82,7 +102,7 @@ function TransactionsPageContent() {
       toast.success("Transação excluída")
     } catch (error) {
       console.error("Failed to delete transaction:", error)
-      toast.error("Falha ao excluir transação")
+      toast.error(getUserFriendlyApiError(error, "transaction"))
     }
   }
 
@@ -224,13 +244,14 @@ function TransactionsPageContent() {
     )
   }
 
-  const defaultProfile: UserProfile = {
-    name: "User",
-    monthlyBudget: 5000,
-    savingsGoal: 10000,
-    streak: 1,
-    totalSaved: 0,
-  }
+  const defaultProfile: UserProfile =
+    userProfile || {
+      name: "User",
+      monthlyBudget: 5000,
+      savingsGoal: 10000,
+      streak: 0,
+      totalSaved: 0,
+    }
 
   return (
     <AppShell userProfile={defaultProfile}>

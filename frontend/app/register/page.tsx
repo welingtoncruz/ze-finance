@@ -6,6 +6,8 @@ import { Wallet, Sparkles } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { AuthForm } from "@/components/auth/AuthForm"
 import { useAuth } from "@/context/AuthContext"
+import api from "@/lib/api"
+import { getUserFriendlyApiError } from "@/lib/errors/apiErrorMapper"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -18,17 +20,28 @@ export default function RegisterPage() {
     }
   }, [isHydrated, isAuthenticated, router])
 
-  const handleRegister = async (email: string, password: string) => {
+  const handleRegister = async (
+    email: string,
+    password: string,
+    profile: { name: string; monthlyBudget: string }
+  ) => {
     try {
       setError(null)
       await register(email, password)
+      const parsedBudget = Number(profile.monthlyBudget)
+      if (Number.isFinite(parsedBudget) && parsedBudget > 0) {
+        await api.patch("/user/profile", {
+          full_name: profile.name.trim() || null,
+          monthly_budget: parsedBudget,
+        })
+      } else if (profile.name.trim()) {
+        await api.patch("/user/profile", {
+          full_name: profile.name.trim(),
+        })
+      }
       router.push("/")
     } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Falha no cadastro. Tente novamente."
-      )
+      setError(getUserFriendlyApiError(err, "auth"))
     }
   }
 

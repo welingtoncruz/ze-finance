@@ -9,12 +9,14 @@ erDiagram
   User ||--o{ Transaction : "records"
   User ||--o{ ChatMessage : "has"
   User ||--o{ ChatConversationSummary : "has"
+  User ||--o{ RefreshToken : "has"
 
   User {
     uuid id PK
     string email UK
     string hashed_password
     string full_name
+    decimal monthly_budget
     timestamp created_at
     timestamp last_login_at
   }
@@ -48,6 +50,15 @@ erDiagram
     text summary
     timestamp updated_at
   }
+
+  RefreshToken {
+    uuid id PK
+    uuid user_id FK
+    string token_hash
+    timestamp created_at
+    timestamp expires_at
+    timestamp revoked_at
+  }
 ```
 
 ## Entities
@@ -60,6 +71,7 @@ Represents a registered user in the system.
 - **email** (string, unique): login identifier.
 - **hashed_password** (string): password hash (bcrypt).
 - **full_name** (string, nullable): optional display name.
+- **monthly_budget** (decimal, nullable): monthly budget for dashboard; defaults to `DEFAULT_MONTHLY_BUDGET` env (5000) at creation.
 - **created_at** (timestamp): creation timestamp.
 - **last_login_at** (timestamp, nullable): last successful login time.
 
@@ -98,6 +110,17 @@ Stores a rolling summary of older messages for a conversation (memory optimizati
 - **user_id** (UUID, FK -> User.id)
 - **summary** (text)
 - **updated_at** (timestamp)
+
+### RefreshToken
+
+Represents a long-lived opaque token used to obtain new access tokens without re-entering credentials.
+
+- **id** (UUID, PK)
+- **user_id** (UUID, FK -> User.id): owner of the refresh token.
+- **token_hash** (string): deterministic one-way hash of the raw refresh token (raw value is never stored).
+- **created_at** (timestamp): creation time.
+- **expires_at** (timestamp): absolute expiry for the refresh token.
+- **revoked_at** (timestamp, nullable): revocation time (when set, the token can no longer be used).
 
 ## Constraints and notes
 

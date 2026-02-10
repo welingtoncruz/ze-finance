@@ -9,11 +9,12 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
-# Auth Schemas
+ # Auth Schemas
 class UserCreate(BaseModel):
     """Schema for user registration."""
     email: EmailStr
     password: str = Field(min_length=8)
+    full_name: Optional[str] = None
 
 
 class Token(BaseModel):
@@ -22,13 +23,18 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
+class TokenRefreshRequest(BaseModel):
+    """Schema for refresh token request (optional body-based refresh)."""
+    refresh_token: str
+
+
 # Transaction Schemas
 class TransactionCreate(BaseModel):
     """Schema for creating a new transaction."""
     amount: Decimal = Field(gt=0, description="Amount must be positive")
     type: str = Field(pattern="^(INCOME|EXPENSE)$")
-    category: str
-    description: Optional[str] = None
+    category: str = Field(max_length=255)
+    description: Optional[str] = Field(default=None, max_length=255)
     occurred_at: Optional[datetime] = None
 
     @field_validator("type")
@@ -44,8 +50,8 @@ class TransactionUpdate(BaseModel):
     """Schema for updating a transaction (partial update, all fields optional)."""
     amount: Optional[Decimal] = Field(default=None, gt=0, description="Amount must be positive if provided")
     type: Optional[str] = Field(default=None, pattern="^(INCOME|EXPENSE)$")
-    category: Optional[str] = None
-    description: Optional[str] = None
+    category: Optional[str] = Field(default=None, max_length=255)
+    description: Optional[str] = Field(default=None, max_length=255)
     occurred_at: Optional[datetime] = None
 
     @field_validator("type")
@@ -91,3 +97,30 @@ class DashboardSummary(BaseModel):
     total_income: Decimal
     total_expense: Decimal
     by_category: list[CategoryMetric]
+
+
+class UserProfileResponse(BaseModel):
+    """Schema for authenticated user profile response."""
+    id: UUID
+    email: EmailStr
+    full_name: Optional[str] = None
+    monthly_budget: Decimal
+
+
+class UserProfileUpdate(BaseModel):
+    """Schema for updating authenticated user profile."""
+    full_name: Optional[str] = None
+    monthly_budget: Optional[Decimal] = Field(
+        default=None,
+        gt=0,
+        description="Monthly budget must be positive if provided",
+    )
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, v: Optional[str]) -> Optional[str]:
+        """Normalize full name to trimmed string or None."""
+        if v is None:
+            return None
+        trimmed = v.strip()
+        return trimmed or None

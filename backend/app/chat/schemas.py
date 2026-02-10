@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class ChatMessageCreate(BaseModel):
     """Schema for creating a new chat message."""
     conversation_id: Optional[UUID] = None
-    text: Optional[str] = None
+    text: Optional[str] = Field(default=None, max_length=10000)
     content_type: Literal["text"] = "text"
 
 

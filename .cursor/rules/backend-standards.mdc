@@ -1,6 +1,6 @@
 ---
 description: Backend development standards, best practices, and conventions for the Zefa Finance application (Python/FastAPI/SQLAlchemy), including simplified Clean Architecture, SOLID principles, and API standards.
-globs: ["backend/**/*.py", "backend/requirements.txt", "backend/Dockerfile", "backend/alembic.ini"]
+globs: ["backend/**/*.py", "backend/requirements.txt", "backend/Dockerfile"]
 alwaysApply: true
 ---
 
@@ -76,7 +76,7 @@ backend/
 │   ├── auth_utils.py      # JWT Logic and Password Hashing
 │   ├── ai/                # AI gateway, tools, prompt (Zefa chat agent)
 │   ├── chat/              # Chat CRUD, routes, schemas (message persistence)
-│   └── routers/           # Auth, dashboard, transactions
+│   └── routers/           # Auth, dashboard, transactions, user
 ├── tests/
 │   ├── conftest.py        # Pytest Fixtures (In-memory DB, Clients)
 │   ├── test_auth.py
