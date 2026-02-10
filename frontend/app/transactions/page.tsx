@@ -2,19 +2,21 @@
 
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { AppShell } from "@/components/layout/AppShell"
 import { TransactionsScreen } from "@/components/transactions/TransactionsScreen"
 import { SwipeDrawer } from "@/components/overlay/SwipeDrawer"
 import { QuickAddTransaction } from "@/components/transactions/QuickAddTransaction"
 import { EditTransactionDrawer } from "@/components/transactions/EditTransactionDrawer"
 import { useAuth } from "@/context/AuthContext"
+import { useUserProfileQuery, useTransactionsQuery } from "@/lib/queries"
+import { queryKeys } from "@/lib/queries"
 import api from "@/lib/api"
-import type { ApiTransactionResponse, ApiUserProfileResponse } from "@/lib/types/api"
+import type { ApiTransactionResponse } from "@/lib/types/api"
 import {
   mapApiTransactionToUi,
   mapUiTransactionToApiCreate,
   mapUiTransactionToApiUpdate,
-  mapApiUserProfileToUi,
 } from "@/lib/types/api"
 import type { Transaction, UserProfile } from "@/lib/types"
 import { toast } from "sonner"
@@ -23,13 +25,19 @@ import { getUserFriendlyApiError } from "@/lib/errors/apiErrorMapper"
 function TransactionsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
   const { isAuthenticated, isHydrated } = useAuth()
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
+
+  const profileQuery = useUserProfileQuery(Boolean(isAuthenticated))
+  const transactionsQuery = useTransactionsQuery(Boolean(isAuthenticated))
+
+  const userProfile = profileQuery.data
+  const transactions = transactionsQuery.data ?? []
+  const hasCachedData = transactions.length > 0 || userProfile != null
+  const isLoading = transactionsQuery.isLoading && !hasCachedData
 
   useEffect(() => {
     if (isHydrated && !isAuthenticated) {
@@ -43,41 +51,9 @@ function TransactionsPageContent() {
     }
   }, [searchParams])
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      void loadData()
-    }
-  }, [isAuthenticated])
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true)
-      const [profileRes, transactionsRes] = await Promise.all([
-        api.get<ApiUserProfileResponse>("/user/profile"),
-        api.get<ApiTransactionResponse[]>("/transactions?limit=50"),
-      ])
-
-      const mappedProfile = mapApiUserProfileToUi(profileRes.data)
-      setUserProfile(mappedProfile)
-      if (typeof window !== "undefined") {
-        localStorage.setItem("zefa_profile", JSON.stringify(mappedProfile))
-      }
-
-      const mappedTransactions = transactionsRes.data.map(mapApiTransactionToUi)
-      setTransactions(mappedTransactions)
-    } catch (error) {
-      console.error("Failed to load data:", error)
-      toast.error("Falha ao carregar transações")
-
-      if (typeof window !== "undefined") {
-        const savedProfile = localStorage.getItem("zefa_profile")
-        if (savedProfile) {
-          setUserProfile(JSON.parse(savedProfile))
-        }
-      }
-    } finally {
-      setIsLoading(false)
-    }
+  const invalidateTransactions = () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.transactions })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary })
   }
 
   const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
@@ -85,7 +61,10 @@ function TransactionsPageContent() {
       const apiData = mapUiTransactionToApiCreate(transaction)
       const response = await api.post<ApiTransactionResponse>("/transactions", apiData)
       const newTransaction = mapApiTransactionToUi(response.data)
-      setTransactions((prev) => [newTransaction, ...prev])
+      queryClient.setQueryData(queryKeys.transactions, (old: Transaction[] | undefined) =>
+        old ? [newTransaction, ...old] : [newTransaction]
+      )
+      invalidateTransactions()
       setIsDrawerOpen(false)
       toast.success("Transação adicionada com sucesso")
     } catch (error) {
@@ -98,7 +77,10 @@ function TransactionsPageContent() {
   const handleDeleteTransaction = async (id: string) => {
     try {
       await api.delete(`/transactions/${id}`)
-      setTransactions((prev) => prev.filter((t) => t.id !== id))
+      queryClient.setQueryData(queryKeys.transactions, (old: Transaction[] | undefined) =>
+        old ? old.filter((t) => t.id !== id) : []
+      )
+      invalidateTransactions()
       toast.success("Transação excluída")
     } catch (error) {
       console.error("Failed to delete transaction:", error)
@@ -112,66 +94,61 @@ function TransactionsPageContent() {
   }
 
   const handleSaveEdit = async (updatedTransaction: Transaction) => {
+    const currentTransactions = queryClient.getQueryData<Transaction[]>(queryKeys.transactions) ?? []
+    const originalTransaction = currentTransactions.find((t) => t.id === updatedTransaction.id)
+
     try {
-      // Find original transaction for comparison
-      const originalTransaction = transactions.find((t) => t.id === updatedTransaction.id)
-      
-      // Update UI immediately (optimistic update)
-      setTransactions((prev) =>
-        prev.map((t) => (t.id === updatedTransaction.id ? updatedTransaction : t))
+      queryClient.setQueryData(
+        queryKeys.transactions,
+        currentTransactions.map((t) =>
+          t.id === updatedTransaction.id ? updatedTransaction : t
+        )
       )
-      
-      // Prepare update payload
+
       const updatePayload = mapUiTransactionToApiUpdate(updatedTransaction, originalTransaction)
-      
-      // Attempt backend sync
+
       try {
         const response = await api.patch<ApiTransactionResponse>(
           `/transactions/${updatedTransaction.id}`,
           updatePayload
         )
         const syncedTransaction = mapApiTransactionToUi(response.data)
-        
-        // Update with server response
-        setTransactions((prev) =>
-          prev.map((t) => (t.id === syncedTransaction.id ? syncedTransaction : t))
+
+        queryClient.setQueryData(queryKeys.transactions, (old: Transaction[] | undefined) =>
+          old ? old.map((t) => (t.id === syncedTransaction.id ? syncedTransaction : t)) : []
         )
-        
-        // Clear local pending edit if exists
+        invalidateTransactions()
+
         if (typeof window !== "undefined") {
-          const localEdits = JSON.parse(
-            localStorage.getItem("zefa_local_edits_v2") || "{}"
-          )
+          const localEdits = JSON.parse(localStorage.getItem("zefa_local_edits_v2") || "{}")
           delete localEdits[updatedTransaction.id]
           localStorage.setItem("zefa_local_edits_v2", JSON.stringify(localEdits))
         }
-        
+
         toast.success("Transação atualizada com sucesso")
         setIsEditDrawerOpen(false)
         setSelectedTransaction(null)
-      } catch (syncError: any) {
-        // Sync failed - persist locally as pending
+      } catch (syncError: unknown) {
+        const err = syncError as { response?: { status?: number } }
         if (typeof window !== "undefined") {
-          const localEdits = JSON.parse(
-            localStorage.getItem("zefa_local_edits_v2") || "{}"
-          )
+          const localEdits = JSON.parse(localStorage.getItem("zefa_local_edits_v2") || "{}")
           localEdits[updatedTransaction.id] = {
             transaction: updatedTransaction,
             updatedAt: new Date().toISOString(),
-            syncStatus: syncError.response?.status === 404 ? "failed" : "pending",
+            syncStatus: err.response?.status === 404 ? "failed" : "pending",
           }
           localStorage.setItem("zefa_local_edits_v2", JSON.stringify(localEdits))
         }
-        
-        // Show appropriate message
-        if (syncError.response?.status === 404) {
+
+        if (err.response?.status === 404) {
           toast.error("Transação não encontrada. A edição foi removida.")
-          // Remove from UI if transaction was deleted
-          setTransactions((prev) => prev.filter((t) => t.id !== updatedTransaction.id))
+          queryClient.setQueryData(queryKeys.transactions, (old: Transaction[] | undefined) =>
+            old ? old.filter((t) => t.id !== updatedTransaction.id) : []
+          )
         } else {
           toast.warning("Edição salva localmente. Sincronização pendente.")
         }
-        
+
         setIsEditDrawerOpen(false)
         setSelectedTransaction(null)
       }
@@ -181,57 +158,49 @@ function TransactionsPageContent() {
     }
   }
 
-  // Load and sync local pending edits on mount
   useEffect(() => {
-    if (typeof window !== "undefined" && transactions.length > 0) {
-      const localEdits = JSON.parse(
-        localStorage.getItem("zefa_local_edits_v2") || "{}"
-      )
-      
-      if (Object.keys(localEdits).length > 0) {
-        // Apply local edits to UI
-        setTransactions((prev) =>
-          prev.map((t) => {
-            const edit = localEdits[t.id]
-            return edit ? { ...t, ...edit.transaction } : t
-          })
+    if (typeof window === "undefined" || transactions.length === 0) return
+
+    const localEdits = JSON.parse(localStorage.getItem("zefa_local_edits_v2") || "{}")
+    if (Object.keys(localEdits).length === 0) return
+
+    const merged = transactions.map((t) => {
+      const edit = localEdits[t.id] as { transaction?: Transaction } | undefined
+      return edit?.transaction ? { ...t, ...edit.transaction } : t
+    })
+    queryClient.setQueryData(queryKeys.transactions, merged)
+
+    Object.entries(localEdits).forEach(async ([txId, edit]: [string, unknown]) => {
+      const e = edit as { syncStatus?: string; transaction?: Transaction }
+      if (e.syncStatus !== "pending") return
+
+      try {
+        const original = transactions.find((t) => t.id === txId)
+        const updatePayload = mapUiTransactionToApiUpdate(e.transaction!, original)
+        const response = await api.patch<ApiTransactionResponse>(`/transactions/${txId}`, updatePayload)
+        const syncedTransaction = mapApiTransactionToUi(response.data)
+
+        queryClient.setQueryData(queryKeys.transactions, (old: Transaction[] | undefined) =>
+          old ? old.map((t) => (t.id === syncedTransaction.id ? syncedTransaction : t)) : []
         )
-        
-        // Attempt to sync pending edits in background
-        Object.entries(localEdits).forEach(async ([txId, edit]: [string, any]) => {
-          if (edit.syncStatus === "pending") {
-            try {
-              const updatePayload = mapUiTransactionToApiUpdate(edit.transaction)
-              const response = await api.patch<ApiTransactionResponse>(
-                `/transactions/${txId}`,
-                updatePayload
-              )
-              const syncedTransaction = mapApiTransactionToUi(response.data)
-              
-              // Update UI with synced data
-              setTransactions((prev) =>
-                prev.map((t) => (t.id === syncedTransaction.id ? syncedTransaction : t))
-              )
-              
-              // Remove from local storage
-              const updatedEdits = { ...localEdits }
-              delete updatedEdits[txId]
-              localStorage.setItem("zefa_local_edits_v2", JSON.stringify(updatedEdits))
-            } catch (error: any) {
-              // If 404, transaction was deleted - remove local edit
-              if (error.response?.status === 404) {
-                const updatedEdits = { ...localEdits }
-                delete updatedEdits[txId]
-                localStorage.setItem("zefa_local_edits_v2", JSON.stringify(updatedEdits))
-                setTransactions((prev) => prev.filter((t) => t.id !== txId))
-              }
-              // Otherwise, keep as pending for retry later
-            }
-          }
-        })
+        invalidateTransactions()
+
+        const updatedEdits = { ...localEdits }
+        delete updatedEdits[txId]
+        localStorage.setItem("zefa_local_edits_v2", JSON.stringify(updatedEdits))
+      } catch (error: unknown) {
+        const err = error as { response?: { status?: number } }
+        if (err.response?.status === 404) {
+          const updatedEdits = { ...localEdits }
+          delete updatedEdits[txId]
+          localStorage.setItem("zefa_local_edits_v2", JSON.stringify(updatedEdits))
+          queryClient.setQueryData(queryKeys.transactions, (old: Transaction[] | undefined) =>
+            old ? old.filter((t) => t.id !== txId) : []
+          )
+        }
       }
-    }
-  }, [transactions.length])
+    })
+  }, [transactions.length, queryClient])
 
   if (!isHydrated || !isAuthenticated) {
     return (
@@ -245,7 +214,7 @@ function TransactionsPageContent() {
   }
 
   const defaultProfile: UserProfile =
-    userProfile || {
+    userProfile ?? {
       name: "User",
       monthlyBudget: 5000,
       savingsGoal: 10000,

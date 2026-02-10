@@ -1,10 +1,14 @@
 "use client"
 
+import { useCallback } from "react"
 import { usePathname } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { DesktopSidebar } from "./DesktopSidebar"
 import { BottomNavigation } from "./BottomNavigation"
+import { PullToRefresh } from "@/components/pwa/PullToRefresh"
 import { useAuth } from "@/context/AuthContext"
 import type { UserProfile } from "@/lib/types"
+import { queryKeys } from "@/lib/queries/keys"
 
 interface AppShellProps {
   children: React.ReactNode
@@ -14,11 +18,24 @@ interface AppShellProps {
 export function AppShell({ children, userProfile }: AppShellProps) {
   const pathname = usePathname()
   const { logout } = useAuth()
+  const queryClient = useQueryClient()
 
   const isAuthRoute = ["/login", "/register", "/onboarding"].includes(pathname)
   const isChatRoute = pathname.startsWith("/chat")
   const hideDesktopNavigation = isAuthRoute
   const hideMobileNavigation = isAuthRoute || isChatRoute
+  const showPullToRefresh = !isAuthRoute && !isChatRoute
+
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.profile })
+    await queryClient.invalidateQueries({ queryKey: queryKeys.transactions })
+    await queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary })
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: queryKeys.profile }),
+      queryClient.refetchQueries({ queryKey: queryKeys.transactions }),
+      queryClient.refetchQueries({ queryKey: queryKeys.dashboardSummary }),
+    ])
+  }, [queryClient])
 
   // Get current route for navigation highlighting
   const getCurrentRoute = (): string => {
@@ -63,7 +80,11 @@ export function AppShell({ children, userProfile }: AppShellProps) {
             isChatRoute ? "h-full min-h-0" : ""
           } ${!hideDesktopNavigation ? "px-0 lg:pl-0 lg:pr-6" : "mx-auto max-w-lg px-4"}`}
         >
-          {children}
+          {showPullToRefresh ? (
+            <PullToRefresh onRefresh={handleRefresh}>{children}</PullToRefresh>
+          ) : (
+            <>{children}</>
+          )}
         </div>
       </main>
 

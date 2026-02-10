@@ -11,7 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Sparkles,
+  MessageCircle,
   Settings,
 } from "lucide-react"
 import type { UserProfile } from "@/lib/types"
@@ -34,7 +34,7 @@ export function DesktopSidebar({
 
   const navItems = [
     { route: "/", icon: Home, label: "Início" },
-    { route: "/chat", icon: Sparkles, label: "Zefa" },
+    { route: "/chat", icon: MessageCircle, label: "Chat" },
     { route: "/insights", icon: BarChart3, label: "Análises" },
     { route: "/transactions", icon: Receipt, label: "Transações" },
     { route: "/settings", icon: Settings, label: "Configurações" },

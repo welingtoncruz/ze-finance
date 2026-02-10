@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import ChatPage from "@/app/chat/page"
 import { AuthProvider } from "@/context/AuthContext"
 import api from "@/lib/api"
@@ -82,10 +83,15 @@ describe("Chat Integration Tests", () => {
   })
 
   const renderChatPage = () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
     return render(
-      <AuthProvider>
-        <ChatPage />
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ChatPage />
+        </AuthProvider>
+      </QueryClientProvider>
     )
   }
 
