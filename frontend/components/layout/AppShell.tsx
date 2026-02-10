@@ -51,12 +51,18 @@ export function AppShell({ children, userProfile }: AppShellProps) {
 
       {/* Main Content Area */}
       <main
-        className={`min-h-screen transition-all duration-300 ${
-          !hideDesktopNavigation ? "lg:ml-72" : ""
-        }`}
+        className={`transition-all duration-300 ${
+          isChatRoute
+            ? "h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden"
+            : "min-h-screen"
+        } ${!hideDesktopNavigation ? "lg:ml-72" : ""}`}
       >
         {/* Content Container - no lateral padding (headers full-width like bottom nav); screens add px to content only */}
-        <div className={`w-full ${!hideDesktopNavigation ? "px-0 lg:pl-0 lg:pr-6" : "mx-auto max-w-lg px-4"}`}>
+        <div
+          className={`w-full ${
+            isChatRoute ? "h-full min-h-0" : ""
+          } ${!hideDesktopNavigation ? "px-0 lg:pl-0 lg:pr-6" : "mx-auto max-w-lg px-4"}`}
+        >
           {children}
         </div>
       </main>

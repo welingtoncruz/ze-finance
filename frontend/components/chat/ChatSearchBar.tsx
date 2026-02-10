@@ -15,6 +15,8 @@ interface ChatSearchBarProps {
   onPrev: () => void
   onClose: () => void
   isMobile?: boolean
+  /** When true, uses primary-foreground colors for contrast on gradient header */
+  variant?: "default" | "header"
 }
 
 /**
@@ -30,6 +32,7 @@ export function ChatSearchBar({
   onPrev,
   onClose,
   isMobile = false,
+  variant = "default",
 }: ChatSearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -52,10 +55,13 @@ export function ChatSearchBar({
     }
   }
 
+  const iconClass = variant === "header" ? "text-primary-foreground" : "text-muted-foreground"
+  const counterClass = variant === "header" ? "text-primary-foreground/90" : "text-muted-foreground"
+
   return (
-    <div className="flex items-center gap-2 w-full">
+    <div className={`flex items-center gap-2 w-full ${variant === "header" ? "text-primary-foreground" : ""}`}>
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${iconClass}`} />
         <Input
           ref={inputRef}
           type="text"
@@ -71,14 +77,14 @@ export function ChatSearchBar({
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 hover:bg-muted transition-colors"
             aria-label="Limpar busca"
           >
-            <X className="h-4 w-4 text-muted-foreground" />
+            <X className={`h-4 w-4 ${iconClass}`} />
           </button>
         )}
       </div>
 
       {matchCount > 0 && (
         <>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+          <div className={`flex items-center gap-1 text-xs whitespace-nowrap ${counterClass}`}>
             <span>
               {activeIndex + 1}/{matchCount}
             </span>
@@ -89,20 +95,20 @@ export function ChatSearchBar({
               size="sm"
               onClick={onPrev}
               disabled={matchCount === 0}
-              className="h-8 w-8 p-0"
+              className={`h-8 w-8 p-0 ${variant === "header" ? "text-primary-foreground hover:text-primary-foreground/80 hover:bg-primary-foreground/10" : ""}`}
               aria-label="Resultado anterior"
             >
-              <ChevronUp className="h-4 w-4" />
+              <ChevronUp className={`h-4 w-4 ${iconClass}`} />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={onNext}
               disabled={matchCount === 0}
-              className="h-8 w-8 p-0"
+              className={`h-8 w-8 p-0 ${variant === "header" ? "text-primary-foreground hover:text-primary-foreground/80 hover:bg-primary-foreground/10" : ""}`}
               aria-label="Próximo resultado"
             >
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className={`h-4 w-4 ${iconClass}`} />
             </Button>
           </div>
         </>
@@ -112,10 +118,10 @@ export function ChatSearchBar({
         variant="ghost"
         size="sm"
         onClick={onClose}
-        className="h-8 w-8 p-0"
+        className={`h-8 w-8 p-0 ${variant === "header" ? "text-primary-foreground hover:text-primary-foreground/80 hover:bg-primary-foreground/10" : ""}`}
         aria-label="Fechar busca"
       >
-        <X className="h-4 w-4" />
+        <X className={`h-4 w-4 ${iconClass}`} />
       </Button>
     </div>
   )
