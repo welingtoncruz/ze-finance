@@ -65,8 +65,23 @@ export function ZefaChatScreen() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const inputContainerRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const viewportHeight = useVisualViewportHeight()
+
+  // Apply visual viewport height to parent (main) via CSS var - fixes keyboard covering content and gap below
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    const isMobile = window.innerWidth < 1024
+    if (isMobile && viewportHeight != null) {
+      document.body.style.setProperty("--chat-viewport-height", `${viewportHeight}px`)
+    } else {
+      document.body.style.removeProperty("--chat-viewport-height")
+    }
+    return () => {
+      document.body.style.removeProperty("--chat-viewport-height")
+    }
+  }, [viewportHeight])
 
   // Search state
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -330,16 +345,18 @@ export function ZefaChatScreen() {
     [retryMessage, activeMatchMessageId, debouncedQuery]
   )
 
-  const containerStyle =
-    viewportHeight != null
-      ? { height: viewportHeight, maxHeight: viewportHeight }
-      : undefined
+  const handleInputFocus = useCallback(() => {
+    setIsInputFocused(true)
+    // Scroll input into view when keyboard opens (after a short delay for keyboard animation)
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        inputContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+      }, 300)
+    })
+  }, [])
 
   return (
-    <div
-      className="flex h-full min-h-0 flex-col bg-background theme-transition overflow-hidden shrink-0"
-      style={containerStyle}
-    >
+    <div className="flex h-full min-h-0 flex-col bg-background theme-transition overflow-hidden shrink-0">
       {/* Mobile Header - gradient, matches Dashboard/Insights/Transactions */}
       <header className="sticky top-0 z-10 shrink-0 gradient-header px-3 py-4 sm:px-6 sm:py-5 safe-area-top lg:hidden">
         {isSearchOpen ? (
@@ -491,7 +508,10 @@ export function ZefaChatScreen() {
       )}
 
       {/* Input */}
-      <div className="chat-input-container shrink-0 py-3 mb-4 px-3 safe-area-bottom sm:py-4 sm:px-4">
+      <div
+        ref={inputContainerRef}
+        className="chat-input-container shrink-0 py-3 mb-4 px-3 safe-area-bottom sm:py-4 sm:px-4"
+      >
         <form onSubmit={handleSubmit} className="mx-auto max-w-2xl lg:max-w-4xl">
           <div className="flex items-center gap-2">
             <button
@@ -508,7 +528,7 @@ export function ZefaChatScreen() {
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onFocus={() => setIsInputFocused(true)}
+                onFocus={handleInputFocus}
                 onBlur={() => setIsInputFocused(false)}
                 placeholder="Digite sua mensagem..."
                 disabled={isAssistantTyping}

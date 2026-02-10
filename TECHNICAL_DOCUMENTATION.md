@@ -246,9 +246,9 @@ Minimum navigable flow:
 #### PWA and Mobile UX
 
 **Chat keyboard handling (Visual Viewport):**
-- On mobile, when the virtual keyboard opens in the chat, the layout uses the **Visual Viewport API** (`window.visualViewport`) to keep the header and input bar visible.
-- The chat container height is constrained to `visualViewport.height` when the keyboard opens, so only the messages area scrolls.
-- Header and input stay fixed; no large gap above the keyboard.
+- On mobile, when the virtual keyboard opens in the chat, the **Visual Viewport API** (`window.visualViewport`) is used to resize the main content area.
+- The viewport height is applied via a CSS variable (`--chat-viewport-height`) to the parent `main` element, so the entire chat (header, messages, input) resizes together without gaps or content disappearing.
+- Only the messages area scrolls; header and input stay visible above the keyboard.
 - `interactiveWidget: "resizes-content"` in the viewport meta tag complements this behavior on supported browsers.
 
 **Data cache (stale-while-revalidate):**
