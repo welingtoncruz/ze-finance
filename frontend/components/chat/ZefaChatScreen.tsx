@@ -20,6 +20,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useChat } from "@/lib/hooks/useChat"
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue"
+import { useVisualViewportHeight } from "@/lib/hooks/useVisualViewportHeight"
 import { ChatBubble } from "./ChatBubble"
 import { TypingIndicator } from "./TypingIndicator"
 import { TransactionConfirmationCard } from "./TransactionConfirmationCard"
@@ -65,6 +66,7 @@ export function ZefaChatScreen() {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
+  const viewportHeight = useVisualViewportHeight()
 
   // Search state
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -328,10 +330,18 @@ export function ZefaChatScreen() {
     [retryMessage, activeMatchMessageId, debouncedQuery]
   )
 
+  const containerStyle =
+    viewportHeight != null
+      ? { height: viewportHeight, maxHeight: viewportHeight }
+      : undefined
+
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background theme-transition overflow-hidden">
+    <div
+      className="flex h-full min-h-0 flex-col bg-background theme-transition overflow-hidden shrink-0"
+      style={containerStyle}
+    >
       {/* Mobile Header - gradient, matches Dashboard/Insights/Transactions */}
-      <header className="sticky top-0 z-10 gradient-header px-3 py-4 sm:px-6 sm:py-5 safe-area-top lg:hidden">
+      <header className="sticky top-0 z-10 shrink-0 gradient-header px-3 py-4 sm:px-6 sm:py-5 safe-area-top lg:hidden">
         {isSearchOpen ? (
           <div className="mx-auto flex max-w-2xl lg:max-w-4xl items-center">
             <ChatSearchBar
@@ -427,7 +437,7 @@ export function ZefaChatScreen() {
       {/* Messages */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto py-4 px-3 sm:px-4"
+        className="min-h-0 flex-1 overflow-y-auto py-4 px-3 sm:px-4"
         onScroll={handleMessagesScroll}
       >
         <div className="mx-auto max-w-2xl lg:max-w-4xl space-y-4">
@@ -460,7 +470,7 @@ export function ZefaChatScreen() {
        inputValue.trim() === "" && 
        messages.length === 1 && 
        messages[0].id === "welcome" && (
-        <div className="border-t border-border bg-card/50 py-3 px-3 sm:px-4">
+        <div className="shrink-0 border-t border-border bg-card/50 py-3 px-3 sm:px-4">
           <div className="mx-auto max-w-2xl lg:max-w-4xl">
             <p className="mb-2 text-xs text-muted-foreground">Sugestões:</p>
             <div className="flex flex-wrap gap-2">
@@ -481,7 +491,7 @@ export function ZefaChatScreen() {
       )}
 
       {/* Input */}
-      <div className="chat-input-container py-3 mb-4 px-3 safe-area-bottom sm:py-4 sm:px-4">
+      <div className="chat-input-container shrink-0 py-3 mb-4 px-3 safe-area-bottom sm:py-4 sm:px-4">
         <form onSubmit={handleSubmit} className="mx-auto max-w-2xl lg:max-w-4xl">
           <div className="flex items-center gap-2">
             <button

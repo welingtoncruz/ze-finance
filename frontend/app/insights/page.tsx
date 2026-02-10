@@ -1,74 +1,32 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/layout/AppShell"
 import { useAuth } from "@/context/AuthContext"
 import { InsightsScreen } from "@/components/insights/InsightsScreen"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { BarChart3, Sparkles } from "lucide-react"
-import api from "@/lib/api"
-import type { ApiTransactionResponse, ApiUserProfileResponse } from "@/lib/types/api"
-import { mapApiTransactionToUi, mapApiUserProfileToUi } from "@/lib/types/api"
-import type { Transaction, UserProfile } from "@/lib/types"
+import { useUserProfileQuery, useTransactionsQuery } from "@/lib/queries"
+import type { UserProfile } from "@/lib/types"
 
 export default function InsightsPage() {
   const router = useRouter()
   const { isAuthenticated, isHydrated } = useAuth()
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+
+  const profileQuery = useUserProfileQuery(Boolean(isAuthenticated))
+  const transactionsQuery = useTransactionsQuery(Boolean(isAuthenticated))
+
+  const transactions = transactionsQuery.data ?? []
+  const userProfile = profileQuery.data
+  const hasCachedData = transactions.length > 0 || userProfile != null
+  const isLoading = (profileQuery.isLoading || transactionsQuery.isLoading) && !hasCachedData
 
   useEffect(() => {
     if (isHydrated && !isAuthenticated) {
       router.push("/login")
     }
   }, [isHydrated, isAuthenticated, router])
-
-  const loadData = useCallback(async () => {
-    try {
-      setIsLoading(true)
-
-      const [profileRes, transactionsRes] = await Promise.all([
-        api.get<ApiUserProfileResponse>("/user/profile"),
-        api.get<ApiTransactionResponse[]>("/transactions?limit=50"),
-      ])
-
-      const mappedProfile = mapApiUserProfileToUi(profileRes.data)
-      setUserProfile(mappedProfile)
-      if (typeof window !== "undefined") {
-        localStorage.setItem("zefa_profile", JSON.stringify(mappedProfile))
-      }
-
-      const mappedTransactions = transactionsRes.data.map(mapApiTransactionToUi)
-      setTransactions(mappedTransactions)
-    } catch (error) {
-      console.error("Failed to load data:", error)
-
-      if (typeof window !== "undefined") {
-        const savedProfile = localStorage.getItem("zefa_profile")
-        if (savedProfile) {
-          setUserProfile(JSON.parse(savedProfile))
-        } else {
-          setUserProfile({
-            name: "User",
-            monthlyBudget: 5000,
-            savingsGoal: 10000,
-            streak: 0,
-            totalSaved: 0,
-          })
-        }
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData()
-    }
-  }, [isAuthenticated, loadData])
 
   if (!isHydrated || !isAuthenticated) {
     return (
@@ -81,7 +39,7 @@ export default function InsightsPage() {
     )
   }
 
-  const defaultProfile: UserProfile = userProfile || {
+  const defaultProfile: UserProfile = userProfile ?? {
     name: "User",
     monthlyBudget: 5000,
     savingsGoal: 10000,
@@ -122,9 +80,9 @@ export default function InsightsPage() {
             </div>
           </div>
         </header>
-        
-        <InsightsScreen 
-          transactions={transactions} 
+
+        <InsightsScreen
+          transactions={transactions}
           userProfile={defaultProfile}
           isLoading={isLoading}
         />

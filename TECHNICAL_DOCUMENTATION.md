@@ -215,8 +215,10 @@ Minimum navigable flow:
 - `UserSettingsForm.tsx`: Form for editing display name and monthly budget (calls `GET/PATCH /user/profile`)
 - `MonthSelector.tsx`: Date filter component for insights/transactions
 - `AddToHomeScreenBanner.tsx`: PWA "add to home screen" prompt
+- `PullToRefresh.tsx`: PWA pull-to-refresh wrapper (standalone, mobile only) for main content
 
 **State Management:**
+- **React Query** (TanStack Query): Caches profile, transactions, and dashboard summary; enables instant navigation with stale-while-revalidate.
 - `useChat` hook: Manages messages, conversation ID, typing state, and localStorage persistence
 - Hydration gating: Prevents overwriting persisted state on initial mount
 - Optimistic UI: User messages appear immediately with "sending" status
@@ -240,6 +242,25 @@ Minimum navigable flow:
 - Stores conversation ID and messages (with ISO timestamp strings)
 - Long-term persistence: Survives browser close/reopen
 - Rehydrates on component mount with hydration gating to prevent data loss
+
+#### PWA and Mobile UX
+
+**Chat keyboard handling (Visual Viewport):**
+- On mobile, when the virtual keyboard opens in the chat, the layout uses the **Visual Viewport API** (`window.visualViewport`) to keep the header and input bar visible.
+- The chat container height is constrained to `visualViewport.height` when the keyboard opens, so only the messages area scrolls.
+- Header and input stay fixed; no large gap above the keyboard.
+- `interactiveWidget: "resizes-content"` in the viewport meta tag complements this behavior on supported browsers.
+
+**Data cache (stale-while-revalidate):**
+- **React Query (TanStack Query)** manages profile, transactions, and dashboard summary with a 60-second `staleTime`.
+- Navigating between Dashboard, Transactions, and Insights shows **cached data immediately** when available; skeleton is shown only when no cached data exists.
+- Mutations (add/edit/delete transaction) invalidate the relevant queries; background refetch keeps data fresh.
+
+**PWA refresh (standalone mode):**
+- When the app runs as an installed PWA (`display: standalone`), the browser chrome (including refresh button) is hidden.
+- **Pull-to-refresh** is available in standalone mode on mobile for scrollable main content (Dashboard, Transactions, Insights, Settings). When the user is at the top of the page and pulls down, a "Atualizando…" indicator appears and React Query invalidates profile, transactions, and dashboard summary before refetching (soft refresh).
+- A **Refresh** action ("Atualizar") is also available in the **Mobile Account Drawer** (opened from the bottom nav "Conta" button), visible only when running in standalone mode; it performs a full page reload.
+- Uses `useIsStandalone()` hook to detect PWA mode (via `matchMedia("(display-mode: standalone)")` and iOS `navigator.standalone`).
 
 #### Security (localStorage and headers)
 

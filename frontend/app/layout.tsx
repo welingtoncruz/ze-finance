@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/AuthContext"
+import { QueryProvider } from "@/components/providers/QueryProvider"
 import { AddToHomeScreenBanner } from "@/components/pwa/AddToHomeScreenBanner"
 import './globals.css'
 
@@ -54,6 +55,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 }
 
 export default function RootLayout({
@@ -65,11 +67,13 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <ThemeProvider>
-          <AuthProvider>
-            {children}
-            <AddToHomeScreenBanner />
-            <Toaster position="top-center" richColors />
-          </AuthProvider>
+          <QueryProvider>
+            <AuthProvider>
+              {children}
+              <AddToHomeScreenBanner />
+              <Toaster position="top-center" richColors />
+            </AuthProvider>
+          </QueryProvider>
         </ThemeProvider>
         <Analytics />
       </body>

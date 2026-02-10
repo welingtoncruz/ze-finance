@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Home, Receipt, BarChart3, Sparkles, User } from "lucide-react"
+import { Home, Receipt, BarChart3, MessageCircle, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MobileAccountDrawer } from "./MobileAccountDrawer"
 
@@ -17,7 +17,7 @@ export function BottomNavigation({ currentRoute }: BottomNavigationProps) {
   const navItems = [
     { route: "/", icon: Home, label: "Início" },
     { route: "/insights", icon: BarChart3, label: "Análises" },
-    { route: "/chat", icon: Sparkles, label: "Zefa", isFab: true },
+    { route: "/chat", icon: MessageCircle, label: "Chat" },
     { route: "/transactions", icon: Receipt, label: "Transações" },
   ]
 
@@ -26,7 +26,7 @@ export function BottomNavigation({ currentRoute }: BottomNavigationProps) {
       <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden safe-area-bottom">
         <div className="w-full">
           <div className="flex items-center justify-around bg-card border-t border-border px-2 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
-            {navItems.map(({ route, icon: Icon, label, isFab }) => {
+            {navItems.map(({ route, icon: Icon, label }) => {
               const routeMap: Record<string, string> = {
                 "/": "dashboard",
                 "/transactions": "transactions",
@@ -35,19 +35,6 @@ export function BottomNavigation({ currentRoute }: BottomNavigationProps) {
               }
               const mappedRoute = routeMap[route] || route
               const isActive = currentRoute === mappedRoute || (route === "/" && currentRoute === "dashboard")
-
-              if (isFab) {
-                return (
-                  <button
-                    key={route}
-                    onClick={() => router.push(route)}
-                    className="fab-glow relative -mt-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary touch-target shrink-0"
-                    aria-label={label}
-                  >
-                    <Icon className="h-6 w-6 text-primary-foreground" strokeWidth={2.5} />
-                  </button>
-                )
-              }
 
               return (
                 <button

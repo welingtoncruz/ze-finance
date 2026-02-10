@@ -2,9 +2,10 @@
 
 import { SwipeDrawer } from "@/components/overlay/SwipeDrawer"
 import { Button } from "@/components/ui/button"
-import { LogOut, User, Settings } from "lucide-react"
+import { LogOut, User, Settings, RefreshCw } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { useRouter } from "next/navigation"
+import { useIsStandalone } from "@/lib/hooks/useIsStandalone"
 
 interface MobileAccountDrawerProps {
   isOpen: boolean
@@ -14,6 +15,11 @@ interface MobileAccountDrawerProps {
 export function MobileAccountDrawer({ isOpen, onClose }: MobileAccountDrawerProps) {
   const { logout } = useAuth()
   const router = useRouter()
+  const isStandalone = useIsStandalone()
+
+  const handleRefresh = () => {
+    window.location.reload()
+  }
 
   const handleLogout = () => {
     logout()
@@ -49,6 +55,16 @@ export function MobileAccountDrawer({ isOpen, onClose }: MobileAccountDrawerProp
             <Settings className="h-5 w-5" />
             Configurações
           </Button>
+          {isStandalone && (
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-12"
+              onClick={handleRefresh}
+            >
+              <RefreshCw className="h-5 w-5" />
+              Atualizar
+            </Button>
+          )}
           <Button
             variant="destructive"
             className="w-full justify-start gap-3 h-12"

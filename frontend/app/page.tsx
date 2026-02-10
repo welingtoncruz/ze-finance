@@ -1,77 +1,25 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/layout/AppShell"
 import { DashboardScreen } from "@/components/dashboard/DashboardScreen"
 import { useAuth } from "@/context/AuthContext"
-import api from "@/lib/api"
-import type { ApiDashboardSummary, ApiTransactionResponse, ApiUserProfileResponse } from "@/lib/types/api"
-import { mapApiTransactionToUi, mapApiUserProfileToUi } from "@/lib/types/api"
-import type { Transaction, UserProfile } from "@/lib/types"
+import { useUserProfileQuery, useTransactionsQuery, useDashboardSummaryQuery } from "@/lib/queries"
 
 export default function HomePage() {
   const router = useRouter()
   const { isAuthenticated, isHydrated } = useAuth()
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [dashboardSummary, setDashboardSummary] = useState<ApiDashboardSummary | null>(null)
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+
+  const profileQuery = useUserProfileQuery(Boolean(isAuthenticated))
+  const transactionsQuery = useTransactionsQuery(Boolean(isAuthenticated))
+  const summaryQuery = useDashboardSummaryQuery(Boolean(isAuthenticated))
 
   useEffect(() => {
     if (isHydrated && !isAuthenticated) {
       router.push("/login")
     }
   }, [isHydrated, isAuthenticated, router])
-
-  const loadData = useCallback(async () => {
-    try {
-      setIsLoading(true)
-
-      // Fetch profile, transactions and dashboard summary in parallel
-      const [profileRes, transactionsRes, summaryRes] = await Promise.all([
-        api.get<ApiUserProfileResponse>("/user/profile"),
-        api.get<ApiTransactionResponse[]>("/transactions?limit=50"),
-        api.get<ApiDashboardSummary>("/dashboard/summary"),
-      ])
-
-      const mappedProfile = mapApiUserProfileToUi(profileRes.data)
-      setUserProfile(mappedProfile)
-      if (typeof window !== "undefined") {
-        localStorage.setItem("zefa_profile", JSON.stringify(mappedProfile))
-      }
-
-      const mappedTransactions = transactionsRes.data.map(mapApiTransactionToUi)
-      setTransactions(mappedTransactions)
-      setDashboardSummary(summaryRes.data)
-    } catch (error) {
-      console.error("Failed to load data:", error)
-
-      // Fallback: try to load profile from localStorage if API fails
-      if (typeof window !== "undefined") {
-        const savedProfile = localStorage.getItem("zefa_profile")
-        if (savedProfile) {
-          setUserProfile(JSON.parse(savedProfile))
-        } else {
-          setUserProfile({
-            name: "User",
-            monthlyBudget: 5000,
-            savingsGoal: 10000,
-            streak: 0,
-            totalSaved: 0,
-          })
-        }
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData()
-    }
-  }, [isAuthenticated, loadData])
 
   if (!isHydrated || !isAuthenticated) {
     return (
@@ -84,7 +32,14 @@ export default function HomePage() {
     )
   }
 
-  if (isLoading || !userProfile) {
+  const userProfile = profileQuery.data
+  const transactions = transactionsQuery.data ?? []
+  const dashboardSummary = summaryQuery.data ?? null
+
+  const hasAnyCachedData = userProfile != null || transactions.length > 0 || dashboardSummary != null
+  const isInitialLoading = profileQuery.isLoading && !userProfile
+
+  if (isInitialLoading && !hasAnyCachedData) {
     return (
       <AppShell>
         <div className="min-h-screen flex items-center justify-center">
@@ -97,11 +52,29 @@ export default function HomePage() {
     )
   }
 
+  const fallbackProfile = userProfile ?? {
+    name: "User",
+    monthlyBudget: 5000,
+    savingsGoal: 10000,
+    streak: 0,
+    totalSaved: 0,
+  }
+
+  if (!userProfile && profileQuery.isError) {
+    return (
+      <AppShell userProfile={fallbackProfile}>
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-muted-foreground">Falha ao carregar perfil. Tente novamente.</p>
+        </div>
+      </AppShell>
+    )
+  }
+
   return (
-    <AppShell userProfile={userProfile}>
+    <AppShell userProfile={fallbackProfile}>
       <DashboardScreen
         transactions={transactions}
-        userProfile={userProfile}
+        userProfile={fallbackProfile}
         dashboardSummary={dashboardSummary}
         onViewHistory={() => router.push("/transactions")}
       />
