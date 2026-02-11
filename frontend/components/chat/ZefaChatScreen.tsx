@@ -20,7 +20,6 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useChat } from "@/lib/hooks/useChat"
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue"
-import { useVisualViewportHeight } from "@/lib/hooks/useVisualViewportHeight"
 import { ChatBubble } from "./ChatBubble"
 import { TypingIndicator } from "./TypingIndicator"
 import { TransactionConfirmationCard } from "./TransactionConfirmationCard"
@@ -65,23 +64,7 @@ export function ZefaChatScreen() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const inputContainerRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
-  const viewportHeight = useVisualViewportHeight()
-
-  // Apply visual viewport height to parent (main) via CSS var - fixes keyboard covering content and gap below
-  useEffect(() => {
-    if (typeof document === "undefined") return
-    const isMobile = window.innerWidth < 1024
-    if (isMobile && viewportHeight != null) {
-      document.body.style.setProperty("--chat-viewport-height", `${viewportHeight}px`)
-    } else {
-      document.body.style.removeProperty("--chat-viewport-height")
-    }
-    return () => {
-      document.body.style.removeProperty("--chat-viewport-height")
-    }
-  }, [viewportHeight])
 
   // Search state
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -90,9 +73,8 @@ export function ZefaChatScreen() {
   const debouncedQuery = useDebouncedValue(searchQuery, 200)
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === "function") {
-      messagesEndRef.current.scrollIntoView({ behavior })
-    }
+    const el = messagesContainerRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior })
   }, [])
 
   // Initial scroll to bottom when chat opens
@@ -345,16 +327,6 @@ export function ZefaChatScreen() {
     [retryMessage, activeMatchMessageId, debouncedQuery]
   )
 
-  const handleInputFocus = useCallback(() => {
-    setIsInputFocused(true)
-    // Scroll input into view when keyboard opens (after a short delay for keyboard animation)
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        inputContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
-      }, 300)
-    })
-  }, [])
-
   return (
     <div className="flex h-full min-h-0 flex-col bg-background theme-transition overflow-hidden shrink-0">
       {/* Mobile Header - gradient, matches Dashboard/Insights/Transactions */}
@@ -508,10 +480,7 @@ export function ZefaChatScreen() {
       )}
 
       {/* Input */}
-      <div
-        ref={inputContainerRef}
-        className="chat-input-container shrink-0 py-3 mb-4 px-3 safe-area-bottom sm:py-4 sm:px-4"
-      >
+      <div className="chat-input-container shrink-0 py-3 mb-4 px-3 safe-area-bottom sm:py-4 sm:px-4">
         <form onSubmit={handleSubmit} className="mx-auto max-w-2xl lg:max-w-4xl">
           <div className="flex items-center gap-2">
             <button
@@ -528,7 +497,7 @@ export function ZefaChatScreen() {
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onFocus={handleInputFocus}
+                onFocus={() => setIsInputFocused(true)}
                 onBlur={() => setIsInputFocused(false)}
                 placeholder="Digite sua mensagem..."
                 disabled={isAssistantTyping}

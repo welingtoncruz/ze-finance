@@ -556,7 +556,7 @@ async def test_create_transaction(async_client, auth_token):
 - **E2E Tests**: Full user flow tests (register → login → create transaction → verify dashboard)
 
 **Test Results:**
-- ✅ 60 frontend tests passing (unit, integration, and E2E)
+- 86 frontend tests passing (unit, integration, and E2E)
 
 #### **E2E Test (Main Flow)**
 
@@ -1360,7 +1360,7 @@ Replace the simulated chat interface with a fully integrated backend-connected c
 - Integration tests: 10 tests covering UI flows, error handling, persistence
 - Unit tests: 10 tests for `useChat` hook logic
 - Unit tests: 7 tests for chat service API layer
-- All tests passing (60 total frontend tests)
+- All tests passing (86 total frontend tests)
 
 **Docs Updates Required:**
 - Updated `PROJECT_DOCUMENTATION.md` with chat integration details

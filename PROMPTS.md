@@ -234,7 +234,7 @@ The `/develop-frontend` command was used to implement the frontend chat integrat
 - Integration tests (`tests/integration/chat-integration.test.tsx`): 10 tests covering UI flows
 - Unit tests (`tests/unit/useChat.test.ts`): 10 tests for hook logic
 - Unit tests (`tests/unit/chat-service.test.ts`): 7 tests for API service
-- All 60 frontend tests passing
+- All 86 frontend tests passing
 
 **Documentation Updates:**
 - Updated `PROJECT_DOCUMENTATION.md` with chat integration ticket and details

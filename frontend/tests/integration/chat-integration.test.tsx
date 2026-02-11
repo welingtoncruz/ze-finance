@@ -56,9 +56,14 @@ Object.defineProperty(window, "localStorage", {
   value: localStorageMock,
 })
 
-// Mock scrollIntoView for HTMLElement
+// Mock scrollIntoView and scrollTo for HTMLElement (jsdom does not implement these)
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    value: vi.fn(),
+    writable: true,
+    configurable: true,
+  })
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     value: vi.fn(),
     writable: true,
     configurable: true,
