@@ -57,14 +57,14 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen overflow-hidden theme-transition">
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden overflow-y-auto theme-transition">
       {/* Theme toggle */}
       <div className="absolute top-6 right-6 z-20">
         <ThemeToggle variant="standalone" />
       </div>
 
-      {/* Right Panel - Register Form */}
-      <div className="w-full flex flex-col items-center justify-center p-6 lg:p-12 bg-background relative">
+      {/* Right Panel - Register Form - scrollable on mobile when keyboard opens */}
+      <div className="w-full min-h-0 flex-1 flex flex-col items-center justify-center overflow-y-auto p-6 lg:p-12 bg-background relative">
         {/* Mobile background blobs */}
         <div className="lg:hidden absolute -left-32 -top-32 h-80 w-80 rounded-full bg-primary/10 blur-3xl animated-blob" />
         <div className="lg:hidden absolute -bottom-32 -right-32 h-72 w-72 rounded-full bg-accent/15 blur-3xl animated-blob-delayed" />
