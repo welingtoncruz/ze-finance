@@ -245,11 +245,11 @@ Minimum navigable flow:
 
 #### PWA and Mobile UX
 
-**Chat keyboard handling (Visual Viewport):**
-- On mobile, when the virtual keyboard opens in the chat, the **Visual Viewport API** (`window.visualViewport`) is used to resize the main content area.
-- The viewport height is applied via a CSS variable (`--chat-viewport-height`) to the parent `main` element, so the entire chat (header, messages, input) resizes together without gaps or content disappearing.
-- Only the messages area scrolls; header and input stay visible above the keyboard.
-- `interactiveWidget: "resizes-content"` in the viewport meta tag complements this behavior on supported browsers.
+**Chat layout (fixed header and input):**
+- The chat uses a simple fixed layout: header is fixed at the top, input is fixed at the bottom.
+- Only the messages area scrolls internally; no document or main scroll.
+- The "Ver mensagens recentes" button scrolls only the messages container to bottom and does not affect the page.
+- No Visual Viewport or keyboard-specific resizing is applied.
 
 **Data cache (stale-while-revalidate):**
 - **React Query (TanStack Query)** manages profile, transactions, and dashboard summary with a 60-second `staleTime`.
@@ -297,7 +297,8 @@ Minimum navigable flow:
 #### Frontend tests (recommended minimum)
 - **Unit/Integration Tests**: Component and utility function tests (Vitest)
 - **E2E Tests**: Full user flow tests (Playwright)
-- **Test Results**: ✅ 60 frontend tests passing
+- **Test Results**: 86 frontend tests passing
+- **Test setup**: Chat integration tests mock `HTMLElement.prototype.scrollTo` and `scrollIntoView` because jsdom does not implement these DOM APIs; the mocks allow components that use them (e.g. ZefaChatScreen) to run without errors.
 
 #### At least one E2E test (main flow)
 Minimum E2E scenario (tooling example: Playwright/Cypress):
