@@ -159,6 +159,14 @@ body.keyboard-open .safe-area-bottom {
 
 body.keyboard-open .chat-input-container {
   margin-bottom: 0;
+  padding-top: 0.5rem;
+  padding-bottom: 0;
+}
+
+body.keyboard-open.page-chat {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
 }
 
 body.keyboard-open .nav-bottom-spacer {
@@ -167,7 +175,7 @@ body.keyboard-open .nav-bottom-spacer {
 
 /* Chat: keep header fixed when keyboard open so it stays visible */
 body.keyboard-open .zefa-chat-screen {
-  padding-top: 3.5rem;
+  padding-top: 4rem;
 }
 
 body.keyboard-open .zefa-chat-screen header.gradient-header {
