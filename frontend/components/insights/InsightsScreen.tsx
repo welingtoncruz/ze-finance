@@ -119,7 +119,7 @@ export function InsightsScreen({ transactions, userProfile, isLoading: externalL
   }
 
   return (
-    <div className="flex min-h-screen flex-col pb-28 lg:pb-8 theme-transition">
+    <div className="nav-bottom-spacer flex min-h-screen flex-col pb-28 lg:pb-8 theme-transition">
       <div className="flex-1 py-5 px-3 lg:p-8 animate-slide-up">
         {/* Monthly Overview - Responsive Grid */}
         <div className="flex flex-col gap-4 mb-6 lg:mb-8">

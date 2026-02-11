@@ -2,7 +2,7 @@
 
 export function SkeletonLoader() {
   return (
-    <div className="flex min-h-screen flex-col bg-background pb-28 theme-transition">
+    <div className="nav-bottom-spacer flex min-h-screen flex-col bg-background pb-28 theme-transition">
       {/* Header skeleton */}
       <div className="sticky top-0 z-10 gradient-header px-5 py-5">
         <div className="flex items-center justify-between">

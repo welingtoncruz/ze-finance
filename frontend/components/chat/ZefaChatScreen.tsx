@@ -328,7 +328,7 @@ export function ZefaChatScreen() {
   )
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background theme-transition overflow-hidden shrink-0">
+    <div className="zefa-chat-screen flex h-full min-h-0 flex-col bg-background theme-transition overflow-hidden shrink-0">
       {/* Mobile Header - gradient, matches Dashboard/Insights/Transactions */}
       <header className="sticky top-0 z-10 shrink-0 gradient-header px-3 py-4 sm:px-6 sm:py-5 safe-area-top lg:hidden">
         {isSearchOpen ? (
