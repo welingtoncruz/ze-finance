@@ -77,6 +77,12 @@ export function ZefaChatScreen() {
     if (el) el.scrollTo({ top: el.scrollHeight, behavior })
   }, [])
 
+  // Mark body for chat page so CSS can block document scroll when keyboard opens
+  useEffect(() => {
+    document.body.classList.add("page-chat")
+    return () => document.body.classList.remove("page-chat")
+  }, [])
+
   // Initial scroll to bottom when chat opens
   const hasInitialScrolledRef = useRef(false)
   useEffect(() => {
