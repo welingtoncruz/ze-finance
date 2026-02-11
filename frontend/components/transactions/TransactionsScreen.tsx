@@ -77,7 +77,7 @@ export function TransactionsScreen({
     .reduce((sum, t) => sum + t.amount, 0)
 
   return (
-    <div className="flex min-h-screen flex-col pb-28 lg:pb-8 theme-transition bg-mesh-gradient">
+    <div className="nav-bottom-spacer flex min-h-screen flex-col pb-28 lg:pb-8 theme-transition bg-mesh-gradient">
       {/* Mobile Header */}
       <header className="sticky top-0 z-10 gradient-header px-3 py-5 lg:hidden">
         <div className="flex items-center justify-between">

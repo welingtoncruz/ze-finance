@@ -157,6 +157,27 @@ body.keyboard-open .safe-area-bottom {
   padding-bottom: 0 !important;
 }
 
+body.keyboard-open .chat-input-container {
+  margin-bottom: 0;
+}
+
+body.keyboard-open .nav-bottom-spacer {
+  padding-bottom: 0 !important;
+}
+
+/* Chat: keep header fixed when keyboard open so it stays visible */
+body.keyboard-open .zefa-chat-screen {
+  padding-top: 3.5rem;
+}
+
+body.keyboard-open .zefa-chat-screen header.gradient-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
 /* Glassmorphism card styles */
 .glass-card {
   background: oklch(1 0 0 / 0.8);
