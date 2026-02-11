@@ -6,6 +6,7 @@ import { Toaster } from 'sonner'
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/AuthContext"
 import { QueryProvider } from "@/components/providers/QueryProvider"
+import { KeyboardProvider } from "@/components/providers/KeyboardProvider"
 import { AddToHomeScreenBanner } from "@/components/pwa/AddToHomeScreenBanner"
 import './globals.css'
 
@@ -68,11 +69,13 @@ export default function RootLayout({
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <ThemeProvider>
           <QueryProvider>
-            <AuthProvider>
-              {children}
-              <AddToHomeScreenBanner />
-              <Toaster position="top-center" richColors />
-            </AuthProvider>
+            <KeyboardProvider>
+              <AuthProvider>
+                {children}
+                <AddToHomeScreenBanner />
+                <Toaster position="top-center" richColors />
+              </AuthProvider>
+            </KeyboardProvider>
           </QueryProvider>
         </ThemeProvider>
         <Analytics />

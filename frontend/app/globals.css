@@ -152,6 +152,11 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* When keyboard is open, remove bottom safe area to avoid gap above keyboard */
+body.keyboard-open .safe-area-bottom {
+  padding-bottom: 0 !important;
+}
+
 /* Glassmorphism card styles */
 .glass-card {
   background: oklch(1 0 0 / 0.8);

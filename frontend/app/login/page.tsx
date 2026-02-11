@@ -47,14 +47,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen overflow-hidden theme-transition">
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden overflow-y-auto theme-transition">
       {/* Theme toggle */}
       <div className="absolute top-6 right-6 z-20">
         <ThemeToggle variant="standalone" />
       </div>
 
       {/* Desktop: Split Layout */}
-      <div className="flex w-full">
+      <div className="flex min-h-0 flex-1 w-full">
         {/* Left Panel - Features (Desktop Only) */}
         <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 flex-col justify-center p-12 xl:p-20 bg-gradient-to-br from-primary/5 via-background to-accent/5">
           {/* Animated background blobs */}
@@ -105,8 +105,8 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right Panel - Login Form */}
-        <div className="w-full lg:w-1/2 xl:w-2/5 flex flex-col items-center justify-center p-6 lg:p-12 bg-background relative">
+        {/* Right Panel - Login Form - scrollable on mobile when keyboard opens */}
+        <div className="w-full lg:w-1/2 xl:w-2/5 flex flex-col items-center justify-center min-h-0 overflow-y-auto p-6 lg:p-12 bg-background relative">
           {/* Mobile background blobs */}
           <div className="lg:hidden absolute -left-32 -top-32 h-80 w-80 rounded-full bg-primary/10 blur-3xl animated-blob" />
           <div className="lg:hidden absolute -bottom-32 -right-32 h-72 w-72 rounded-full bg-accent/15 blur-3xl animated-blob-delayed" />
